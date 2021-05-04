@@ -3,13 +3,14 @@
 #define __CONTROLLER_H
 
 #include <iostream>
-#include <eigen-3.3.8/Eigen/Dense>
+#include <Eigen/Dense>
 #include <rbdl/rbdl.h>
 #include <rbdl/addons/urdfreader/urdfreader.h>
 
 #include "trajectory.h"
 #include "robotmodel.h"
 #include "custommath.h"
+#include "quadraticprogram.h"
 
 //#define DEG2RAD (0.01745329251994329576923690768489)
 //#define RAD2DEG 1.0/DEG2RAD
@@ -54,17 +55,22 @@ private:
 	double _kd; //Operational space control D gain	
 	void JointControl();
 	void OperationalSpaceControl();
+	void HQPTaskSpaceControl();
 
 	//robot model
 	CModel Model;
 	void ModelUpdate();
+	MatrixXd _J_hands; // 12x15
+	MatrixXd _J_T_hands; // 15x12
+	MatrixXd _Jdot_hands;
+	MatrixXd _pre_J_hands;
+	MatrixXd _pre_Jdot_hands;
+	VectorXd _Jdot_qdot;
 
 	//operational space variables (two hand)
 	MatrixXd _Lambda_hands; //inertia matri 12x12
-	MatrixXd _Null_hands; //null space projection matrix 15x15
-	MatrixXd _J_hands; // 12x15
-	MatrixXd _J_T_hands; // 15x12
-	MatrixXd _Id_15;
+	MatrixXd _Null_hands; //null space projection matrix 15x15	
+	MatrixXd _Id_15, _Id_12;
 	VectorXd _xddot_star; //12
 	Vector3d _x_err_left_hand;
 	Vector3d _x_err_right_hand;
@@ -74,6 +80,12 @@ private:
 	Vector3d _R_err_right_hand;
 	Vector3d _Rdot_err_left_hand;
 	Vector3d _Rdot_err_right_hand;
+
+	//HQP
+	CQuadraticProgram HQP_P1; //first priority task - dual hand control
+	CQuadraticProgram HQP_P2; //second priority task - joint damping
+	MatrixXd _H1, _H2, _A1, _A2;
+	VectorXd _g1, _g2, _lbA1, _lbA2, _ubA1, _ubA2, _lb1, _lb2, _ub1, _ub2;
 	
 	//motion trajectory
 	double _start_time, _end_time;

@@ -7,8 +7,8 @@
         https://www.roboti.us/resourcelicense.txt
 */
 
-#include "../include/mjxmacro.h"
-#include "../include/uitools.h"
+#include "mujoco200/include/mjxmacro.h"
+#include "mujoco200/include/uitools.h"
 #include "stdio.h"
 #include "string.h"
 #include "controller.h"
@@ -20,7 +20,6 @@
 
 #define JDOF 15
 using namespace std;
-
 
 //-------------------------------- global -----------------------------------------------
 
@@ -1957,7 +1956,7 @@ void init(void)
         mju_error("Headers and library have different versions");
 
     // activate MuJoCo license
-	mj_activate("../mujoco200_win64/bin/mjkey.txt");
+	mj_activate("E:\libraries/mujoco200/mjkey.txt");
 
     // init GLFW, set timer callback (milliseconds)
     if (!glfwInit())
@@ -2041,7 +2040,7 @@ int main(int argc, const char** argv)
     // initialize everything
     init();
 	//char str[100] = "../mujoco200_win64/model/arm_test.xml";
-    char str[100] = "../mujoco200_win64/model/dualarm.urdf";
+    char str[100] = "E:/libraries/mujoco200/model/dualarm.urdf";
 	argv[1] = str;
 	argc = sizeof(argv);
 

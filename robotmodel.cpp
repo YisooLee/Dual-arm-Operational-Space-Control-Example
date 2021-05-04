@@ -51,7 +51,7 @@ void CModel::Initialize()
 void CModel::load_model()
 {
 	//read urdf model
-	RigidBodyDynamics::Addons::URDFReadFromFile("../mujoco200_win64/model/dualarm.urdf", &_model, false, true);	
+	RigidBodyDynamics::Addons::URDFReadFromFile("E:/libraries/mujoco200/model/dualarm.urdf", &_model, false, true);	
 	//in this model
 	//body id 1: body_link (trunk)
 	//body id 8: LWrR_Link (left hand)

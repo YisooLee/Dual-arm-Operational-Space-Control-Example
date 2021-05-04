@@ -3,7 +3,7 @@
 #define __TRAJECTORY_H
 
 #include <iostream>
-#include <eigen-3.3.8/Eigen/Dense>
+#include <Eigen/Dense>
 using namespace std;
 using namespace Eigen;
 

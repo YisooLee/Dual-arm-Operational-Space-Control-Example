@@ -7,7 +7,7 @@
 #define PI 3.1415926535897932384626433
 
 #include "math.h"
-#include <eigen-3.3.8/Eigen/Dense>
+#include <Eigen/Dense>
 using namespace Eigen;
 
 
