@@ -1,0 +1,143 @@
+<mujoco model="dualarm">
+    <compiler angle="radian" meshdir="meshes/" />
+    <option collision ="predefined" cone="elliptic" jacobian="sparse" tolerance="1e-6" iterations="30" solver="CG" timestep="0.002" noslip_iterations="30" noslip_tolerance="1e-5"/>
+    <size njmax="8000" nconmax="4000" />
+    <asset>
+        <mesh name="base_link" file="base_link.STL" />
+        <mesh name="body_link" file="body_link.STL" />
+        <mesh name="LShP_Link" file="LShP_Link.STL" />
+        <mesh name="LShR_Link" file="LShR_Link.STL" />
+        <mesh name="LShY_Link" file="LShY_Link.STL" />
+        <mesh name="LElP_Link" file="LElP_Link.STL" />
+        <mesh name="LWrY_Link" file="LWrY_Link.STL" />
+        <mesh name="LWrP_Link" file="LWrP_Link.STL" />
+        <mesh name="LWrR_Link" file="LWrR_Link.STL" />
+        <mesh name="RShP_Link" file="RShP_Link.STL" />
+        <mesh name="RShR_Link" file="RShR_Link.STL" />
+        <mesh name="RShY_Link" file="RShY_Link.STL" />
+        <mesh name="RElP_Link" file="RElP_Link.STL" />
+        <mesh name="RWrY_Link" file="RWrY_Link.STL" />
+        <mesh name="RWrP_Link" file="RWrP_Link.STL" />
+        <mesh name="RWrR_Link" file="RWrR_Link.STL" />
+    </asset>
+
+    <asset>
+        <texture type="skybox" builtin="gradient" width="128" height="128" rgb1=".4 .6 .8" rgb2="0 0 0"/> 
+        <texture name="texgeom" type="cube" builtin="flat" mark="cross" width="128" height="128" 
+            rgb1="0.6 0.6 0.6" rgb2="0.6 0.6 0.6" markrgb="1 1 1"/>  
+        <texture name="texplane" type="2d" builtin="checker" rgb1=".4 .4 .4" rgb2=".6 .6 .6" 
+            width="512" height="512"/>  
+        <material name='MatPlane' reflectance='0.3' texture="texplane" texrepeat="1 1" texuniform="true"/>
+    </asset>
+
+     <visual>
+        <quality shadowsize="2048" offsamples="16"/>
+        <map znear="0.1" force="0.05"/>
+    </visual>
+
+    <statistic extent="4"/>
+
+    <worldbody>
+        <light directional="true" diffuse=".8 .8 .8" pos="0 0 10" dir="0 0 -10"/>
+        <geom name="ground" pos="0 0 0" type="plane" size="10 10 .05" rgba=".7 .7 .7 1" material="MatPlane"/>
+
+        <geom type="mesh" rgba="0.50196 1 0.50196 1" mesh="base_link" />
+        <body name="body_link" pos="0 0.1598 0.9227" quat="0.5 0.5 0.5 0.5">
+            <inertial pos="0.070879 0.38092 3.2435e-05" quat="0.999702 0.0241074 -0.0011948 0.0035823" mass="5.9559" diaginertia="0.0175723 0.0128361 0.0126716" />
+            <joint name="j0" pos="0 0 0" axis="0 1 0" type="slide" limited="true" range="-0.3 0.3" damping="2" frictionloss="1" />
+            <geom type="mesh" rgba="0.89804 0.91765 0.92941 1" mesh="body_link" />
+            <body name="LShP_Link" pos="0.0762 0.3943 -0.121">
+                <inertial pos="-0.013031 -8.3122e-05 -0.078324" quat="0.5 0.5 -0.5 0.5" mass="2.0773" diaginertia="1.17744 1.17744 1.17744" />
+                <joint name="j1" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                <geom type="mesh" rgba="0.66667 0.63922 0.61961 1" mesh="LShP_Link" />
+                <body name="LShR_Link" pos="0.023 0 -0.089">
+                    <inertial pos="-0.020572 -0.12696 2.6805e-05" quat="1 0 0 -1.24725e-05" mass="1.9866" diaginertia="1.1772 1.1772 1.1772" />
+                    <joint name="j2" pos="0 0 0" axis="1 0 0" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                    <geom type="mesh" rgba="0.66667 0.63922 0.61961 1" mesh="LShR_Link" />
+                    <body name="LShY_Link" pos="-0.023 -0.1595 0">
+                        <inertial pos="-1.906e-06 -0.11912 -0.006149" quat="0.499999 0.500001 0.499999 0.500001" mass="1.8888" diaginertia="0.83085 0.83085 0.83085" />
+                        <joint name="j3" pos="0 0 0" axis="0 -1 0" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                        <geom type="mesh" rgba="0.66667 0.63922 0.61961 1" mesh="LShY_Link" />
+                        <body name="LElP_Link" pos="0 -0.1305 0.004">
+                            <inertial pos="-9.5593e-05 -0.10373 -0.0011155" quat="-0.0014133 0.707105 0.00139785 0.707105" mass="1.1558" diaginertia="0.830148 0.830148 0.830148" />
+                            <joint name="j4" pos="0 0 0" axis="0 0 1" range="3.14 3.14" damping="2" frictionloss="1" />
+                            <geom type="mesh" rgba="0.66667 0.63922 0.61961 1" mesh="LElP_Link" />
+                            <body name="LWrY_Link" pos="0 -0.12411 -0.004">
+                                <inertial pos="-4.2008e-05 -0.092156 -0.003711" quat="0.5 0.5 0.5 0.5" mass="1.3048" diaginertia="0.461587 0.461587 0.461587" />
+                                <joint name="j5" pos="0 0 0" axis="0 -1 0" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                                <geom type="mesh" rgba="0.89804 0.89804 0.89804 1" mesh="LWrY_Link" />
+                                <body name="LWrP_Link" pos="0 -0.16589 -0.042">
+                                    <inertial pos="0.0032734 -0.00018748 0.041704" quat="0.499518 0.500481 -0.499518 0.500481" mass="1.0771" diaginertia="0.461324 0.461324 0.461324" />
+                                    <joint name="j6" pos="0 0 0" axis="0 0 -1" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                                    <geom type="mesh" rgba="1 0.94902 0.9098 1" mesh="LWrP_Link" />
+                                    <body name="LWrR_Link" pos="0.0177 0 0.042">
+                                        <inertial pos="0.010415 -0.037361 -1.1456e-06" quat="0.707084 0.70713 1.07289e-06 1.07282e-06" mass="0.27656" diaginertia="0.46113 0.46113 0.46113" />
+                                        <joint name="j7" pos="0 0 0" axis="1 0 0" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                                        <geom name="LWrR_Link_geo" type="mesh" rgba="0.64706 0.61961 0.58824 1" mesh="LWrR_Link" />
+			<geom type="sphere" pos = "-0.017 -0.08 0" size="0.005" rgba = "1 0 0 1"/>
+                                    </body>
+                                </body>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+            <body name="RShP_Link" pos="0.0762 0.3943 0.121">
+                <inertial pos="-0.013031 -8.2555e-05 0.078324" quat="0.5 0.5 -0.5 0.5" mass="2.0773" diaginertia="1.17744 1.17744 1.17744" />
+                <joint name="j8" pos="0 0 0" axis="0 0 -1" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                <geom type="mesh" rgba="0.66667 0.63922 0.61961 1" mesh="RShP_Link" />
+                <body name="RShR_Link" pos="0.023 0 0.089">
+                    <inertial pos="-0.020572 -0.12696 -2.6614e-05" quat="1 0 0 -1.24725e-05" mass="1.9866" diaginertia="1.1772 1.1772 1.1772" />
+                    <joint name="j9" pos="0 0 0" axis="1 0 0" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                    <geom type="mesh" rgba="0.66667 0.63922 0.61961 1" mesh="RShR_Link" />
+                    <body name="RShY_Link" pos="-0.023 -0.1595 0">
+                        <inertial pos="-1.1816e-06 -0.11912 0.006149" quat="0.500001 0.499999 0.500001 0.499999" mass="1.8888" diaginertia="0.83085 0.83085 0.83085" />
+                        <joint name="j10" pos="0 0 0" axis="0 -1 0" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                        <geom type="mesh" rgba="0.66667 0.63922 0.61961 1" mesh="RShY_Link" />
+                        <body name="RElP_Link" pos="0 -0.1305 -0.004">
+                            <inertial pos="-0.00011214 -0.10373 0.0010998" quat="-0.00229816 0.707103 0.00231357 0.707103" mass="1.1558" diaginertia="0.830148 0.830148 0.830148" />
+                            <joint name="j11" pos="0 0 0" axis="0 0 -1" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                            <geom type="mesh" rgba="0.66667 0.63922 0.61961 1" mesh="RElP_Link" />
+                            <body name="RWrY_Link" pos="0 -0.12411 0.004">
+                                <inertial pos="-5.7522e-05 -0.092145 0.0037353" quat="0.5 0.5 0.5 0.5" mass="1.3048" diaginertia="0.461587 0.461587 0.461587" />
+                                <joint name="j12" pos="0 0 0" axis="0 -1 0" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                                <geom type="mesh" rgba="0.66667 0.63922 0.61961 1" mesh="RWrY_Link" />
+                                <body name="RWrP_Link" pos="0 -0.16589 0.042">
+                                    <inertial pos="0.0022235 -0.00018748 -0.041704" quat="0.499518 0.500482 -0.499518 0.500482" mass="1.0771" diaginertia="0.461324 0.461324 0.461324" />
+                                    <joint name="j13" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                                    <geom type="mesh" rgba="0.64706 0.61961 0.58824 1" mesh="RWrP_Link" />
+                                    <body name="RWrR_Link" pos="0.0177 0 -0.042">
+                                        <inertial pos="0.010415 -0.037361 -1.1456e-06" quat="0.707084 0.70713 1.07289e-06 1.07282e-06" mass="0.27656" diaginertia="0.46113 0.46113 0.46113" />
+                                        <joint name="j14" pos="0 0 0" axis="1 0 0" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                                        <geom  name="RWrR_Link_geo" type="mesh" rgba="0.64706 0.61961 0.58824 1" mesh="RWrR_Link" />
+		            <geom type="sphere" pos = "-0.017 -0.08 0" size="0.005" rgba = "1 0 0 1"/>
+                                    </body>
+                                </body>
+                            </body>
+                        </body>
+                    </body>
+                </body>
+            </body>
+        </body>
+
+    <body name="object_box" pos = "1 0.4 0.8">
+        <freejoint/>
+        <inertial pos="0.0 0.0 0.0" mass="1.0" diaginertia="0.1 0.1 0.1" />
+        <geom name = "object1" type="box" size="0.15 0.15 0.15" rgba = "0.5 0.5 0.7 1"/>
+    </body>
+    <body name="table" pos = "1 0.4 0.4">
+        <freejoint/>
+        <inertial pos="0.0 0.0 0.0" mass="1.0" diaginertia="0.1 0.1 0.1" />
+        <geom name = "table1" type="box" size="0.1 0.1 0.3" rgba = "0.4 0.3 0.3 1"/>
+    </body>
+
+    </worldbody>
+
+    <contact>
+	<pair geom1 ="ground" geom2 ="object1" friction ="1 1 0.005 0.0001 0.0001" condim ="3" margin =" 0.0" />
+	<pair geom1 ="ground" geom2 ="table1" friction ="1 1 0.005 0.0001 0.0001" condim ="3" margin =" 0.0" />
+	<pair geom1 ="object1" geom2 ="table1" friction ="1 1 0.005 0.0001 0.0001" condim ="3" margin =" 0.0" />
+	<pair geom1 ="LWrR_Link_geo" geom2 ="object1" friction ="1 1 0.005 0.0001 0.0001" condim ="3" margin =" 0.0" />
+	<pair geom1 ="RWrR_Link_geo" geom2 ="object1" friction ="1 1 0.005 0.0001 0.0001" condim ="3" margin =" 0.0" />
+    </contact>
+</mujoco>

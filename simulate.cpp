@@ -1847,17 +1847,17 @@ void simulate(void)
             // record start time
             double startwalltm = glfwGetTime();
 
-            if (JDOF != m->nv)
-            {
-                cout << "Model dof mismatch!!!!  Model dof =" << m->nv << endl<<endl;
-            }
+            //if (JDOF != m->nv)
+            //{
+            //    cout << "Model dof mismatch!!!!  Model dof =" << m->nv << endl<<endl;
+            //}
 
             // running
             if( settings.run )
             {   
                 //--------------------------------------------------------------------------------------------------//
                 //--------------------------------------------------------------------------------------------------//
-                // controller                
+                // controller                                
                 Control.read(d->time, d->qpos, d->qvel);
                 Control.control_mujoco(d->time);
                 Control.write(d->ctrl);
@@ -2038,23 +2038,16 @@ void init(void)
 int main(int argc, const char** argv)
 {
     // initialize everything
-    init();
-	//char str[100] = "../mujoco200_win64/model/arm_test.xml";
-    char str[100] = "E:/libraries/mujoco200/model/dualarm.urdf";
-	argv[1] = str;
-	argc = sizeof(argv);
+    init();	
+    char str[100] = "E:/libraries/mujoco200/model/dualarm_mod.xml";
+    //char str[100] = "E:/libraries/mujoco200/model/dualarm.urdf";
 
-	printf("%d %s %s\n\n", argc, argv[0], argv[1]);
+    memcpy(filename, str, sizeof(str));
+    settings.loadrequest = 2;
 
-	// request loadmodel if file given (otherwise drag-and-drop)
-    if( argc>1 )
-    {
-		memcpy(filename, str, sizeof(str));
-// 		mju_strncpy(filename, argv[1], 1000);
-        settings.loadrequest = 2;
-    }
 	printf("%s ", filename);
 	printf("%d ", settings.loadrequest);
+    
 
     // start simulation thread
     std::thread simthread(simulate);

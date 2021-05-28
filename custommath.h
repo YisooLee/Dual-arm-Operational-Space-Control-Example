@@ -351,6 +351,69 @@ static Eigen::Matrix3d skew(Eigen::Vector3d src)
 
     return skew;
 }
+/*
+static Eigen::Vector3d getPhi(Eigen::Matrix3d current_rotation, Eigen::Matrix3d desired_rotation)
+{
+    Eigen::Vector3d phi;
+    Eigen::Vector3d s[3], v[3], w[3];
+
+    for (int i = 0; i < 3; i++)
+    {
+        v[i] = current_rotation.block<3, 1>(0, i);
+        w[i] = desired_rotation.block<3, 1>(0, i);
+        s[i] = v[i].cross(w[i]);
+    }
+    phi = s[0] + s[1] + s[2];
+    phi = -0.5 * phi;
+
+    return phi;
+}
+*/
+static Eigen::Vector3d getPhi(Eigen::Matrix3d& RotationMtx, Eigen::Matrix3d& DesiredRotationMtx) //Orientation 구성
+{
+    //Get SkewSymmetric
+    Eigen::Matrix3d s1_skew;
+    Eigen::Matrix3d s2_skew;
+    Eigen::Matrix3d s3_skew;
+
+    Eigen::Vector3d RotMtxcol1;
+    Eigen::Vector3d RotMtxcol2;
+    Eigen::Vector3d RotMtxcol3;
+    for (int i = 0; i < 3; i++)
+    {
+        RotMtxcol1(i) = RotationMtx(i, 0);
+        RotMtxcol2(i) = RotationMtx(i, 1);
+        RotMtxcol3(i) = RotationMtx(i, 2);
+    }
+
+    s1_skew = skew(RotMtxcol1);
+    s2_skew = skew(RotMtxcol2);
+    s3_skew = skew(RotMtxcol3);
+    /////////////////////////////////////////////////////////////
+
+    Eigen::Vector3d s1d;
+    Eigen::Vector3d s2d;
+    Eigen::Vector3d s3d;
+    for (int i = 0; i < 3; i++)
+    {
+        s1d(i) = DesiredRotationMtx(i, 0);
+        s2d(i) = DesiredRotationMtx(i, 1);
+        s3d(i) = DesiredRotationMtx(i, 2);
+    }
+
+    Eigen::Vector3d s1f;
+    Eigen::Vector3d s2f;
+    Eigen::Vector3d s3f;
+
+    s1f = s1_skew * s1d;
+    s2f = s2_skew * s2d;
+    s3f = s3_skew * s3d;
+    /////////////////////////////////////////////////////////////
+    //phi.resize(3);
+    Eigen::Vector3d phi;
+    phi = (s1f + s2f + s3f) * (-1.0 / 2.0);
+    return phi;
+}
 
 static Eigen::Vector3d OrientationVelocity(Eigen::Matrix3d Rot, Eigen::Matrix3d Rotdot) //rotation matrix, derivative of rotation matrix
 {
@@ -363,6 +426,7 @@ static Eigen::Vector3d OrientationVelocity(Eigen::Matrix3d Rot, Eigen::Matrix3d 
 
     return OriVel;
 }
+
 
 static double Cubic(double rT, double rT_0, double rT_f, double rx_0, double rx_dot_0, double rx_f, double rx_dot_f)
 {

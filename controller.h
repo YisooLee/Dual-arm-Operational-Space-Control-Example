@@ -56,6 +56,7 @@ private:
 	void JointControl();
 	void OperationalSpaceControl();
 	void HQPTaskSpaceControl();
+	void ReducedHQPTaskSpaceControl();
 
 	//robot model
 	CModel Model;
@@ -67,11 +68,22 @@ private:
 	MatrixXd _pre_Jdot_hands;
 	VectorXd _Jdot_qdot;
 
+	MatrixXd _J_pos_hands; // 6x15
+	MatrixXd _J_pos_T_hands; // 15x6
+	MatrixXd _J_ori_hands; // 6x15
+	MatrixXd _J_ori_T_hands; // 15x6	
+
 	//operational space variables (two hand)
 	MatrixXd _Lambda_hands; //inertia matri 12x12
 	MatrixXd _Null_hands; //null space projection matrix 15x15	
 	MatrixXd _Id_15, _Id_12;
 	VectorXd _xddot_star; //12
+
+	MatrixXd _Lambda_pos_hands; //inertia matri 6x6
+	MatrixXd _Lambda_ori_hands; //inertia matri 6x6
+	MatrixXd _Null_hands_ori; //null space projection matrix 15x15
+	MatrixXd _Null_hands_pos; //null space projection matrix 15x15
+
 	Vector3d _x_err_left_hand;
 	Vector3d _x_err_right_hand;
 	Vector3d _xdot_err_left_hand;
@@ -86,6 +98,12 @@ private:
 	CQuadraticProgram HQP_P2; //second priority task - joint damping
 	MatrixXd _H1, _H2, _A1, _A2;
 	VectorXd _g1, _g2, _lbA1, _lbA2, _ubA1, _ubA2, _lb1, _lb2, _ub1, _ub2;
+
+	//Reduced HQP
+	CQuadraticProgram rHQP_P1; //first priority task - dual hand control
+	CQuadraticProgram rHQP_P2; //second priority task - joint damping
+	MatrixXd _rH1, _rH2, _rA1, _rA2;
+	VectorXd _rg1, _rg2, _rlbA1, _rlbA2, _rubA1, _rubA2, _rlb1, _rlb2, _rub1, _rub2;
 	
 	//motion trajectory
 	double _start_time, _end_time;
@@ -109,7 +127,8 @@ private:
 	Vector3d _x_des_right_hand;
 	Vector3d _xdot_des_right_hand;
 
-
+	Matrix3d _R_goal_left_hand; 
+	Matrix3d _R_goal_right_hand;
 };
 
 #endif

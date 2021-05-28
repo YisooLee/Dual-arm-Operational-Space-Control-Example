@@ -59,11 +59,11 @@ VectorXd CTrajectory::position_cubicSpline()
 {
 	VectorXd xd(_vector_size);
 
-	if (_time < _time_start)
+	if (_time <= _time_start)
 	{
 		xd = _init_pos;
 	}
-	else if (_time > _time_end)
+	else if (_time >= _time_end)
 	{
 		xd = _goal_pos;
 	}
@@ -79,11 +79,11 @@ VectorXd CTrajectory::velocity_cubicSpline()
 {
 	VectorXd xdotd(_vector_size);
 
-	if (_time < _time_start)
+	if (_time <= _time_start)
 	{
 		xdotd = _init_vel;
 	}
-	else if (_time > _time_end)
+	else if (_time >= _time_end)
 	{
 		xdotd = _goal_vel;
 	}
