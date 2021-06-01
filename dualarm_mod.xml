@@ -48,7 +48,7 @@
             <geom type="mesh" rgba="0.89804 0.91765 0.92941 1" mesh="body_link" />
             <body name="LShP_Link" pos="0.0762 0.3943 -0.121">
                 <inertial pos="-0.013031 -8.3122e-05 -0.078324" quat="0.5 0.5 -0.5 0.5" mass="2.0773" diaginertia="1.17744 1.17744 1.17744" />
-                <joint name="j1" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                <joint name="j1" pos="0 0 0" axis="0 0 -1" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
                 <geom type="mesh" rgba="0.66667 0.63922 0.61961 1" mesh="LShP_Link" />
                 <body name="LShR_Link" pos="0.023 0 -0.089">
                     <inertial pos="-0.020572 -0.12696 2.6805e-05" quat="1 0 0 -1.24725e-05" mass="1.9866" diaginertia="1.1772 1.1772 1.1772" />
@@ -84,7 +84,7 @@
             </body>
             <body name="RShP_Link" pos="0.0762 0.3943 0.121">
                 <inertial pos="-0.013031 -8.2555e-05 0.078324" quat="0.5 0.5 -0.5 0.5" mass="2.0773" diaginertia="1.17744 1.17744 1.17744" />
-                <joint name="j8" pos="0 0 0" axis="0 0 -1" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
+                <joint name="j8" pos="0 0 0" axis="0 0 1" limited="true" range="-3.14 3.14" damping="2" frictionloss="1" />
                 <geom type="mesh" rgba="0.66667 0.63922 0.61961 1" mesh="RShP_Link" />
                 <body name="RShR_Link" pos="0.023 0 0.089">
                     <inertial pos="-0.020572 -0.12696 -2.6614e-05" quat="1 0 0 -1.24725e-05" mass="1.9866" diaginertia="1.1772 1.1772 1.1772" />
