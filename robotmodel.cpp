@@ -216,8 +216,8 @@ void CModel::set_robot_config()
 	_max_joint_velocity(14) = 14.0;
 	_min_joint_velocity = -_max_joint_velocity;
 
-	_max_joint_position(0) = 0.0;
-	_min_joint_position(0) = -0.6; //-0.6
+	_max_joint_position(0) = 0.35;
+	_min_joint_position(0) = -0.35; //-0.6
 	_max_joint_position(1) = 90.0 * RAD2DEG;
 	_min_joint_position(1) = -90.0 * RAD2DEG;
 	_max_joint_position(2) = 90.0 * RAD2DEG;

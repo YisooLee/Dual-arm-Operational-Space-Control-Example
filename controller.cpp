@@ -80,16 +80,6 @@ void CController::control_mujoco(double time)
 
 		_R_goal_right_hand = Model._R_right_hand;
 		_R_goal_left_hand = Model._R_left_hand;
-		/*
-		_R_goal_right_hand.setZero();
-		_R_goal_right_hand(0, 2) = 1.0;
-		_R_goal_right_hand(1, 1) = -1.0;
-		_R_goal_right_hand(2, 0) = 1.0;
-		_R_goal_left_hand.setZero();
-		_R_goal_left_hand(0, 2) = 1.0;
-		_R_goal_left_hand(1, 1) = 1.0;
-		_R_goal_left_hand(2, 0) = -1.0;
-		*/
 
 		_x_goal_left_hand = Model._x_left_hand; //set as current state
 		LeftHandPosTrajectory.reset_initial(_start_time, Model._x_left_hand, Model._xdot_left_hand.head(3));
@@ -111,24 +101,15 @@ void CController::control_mujoco(double time)
 
 		_R_goal_right_hand = Model._R_right_hand;
 		_R_goal_left_hand = Model._R_left_hand;
-		/*
-		_R_goal_right_hand.setZero();
-		_R_goal_right_hand(0, 2) = 1.0;
-		_R_goal_right_hand(1, 1) = -1.0;
-		_R_goal_right_hand(2, 0) = 1.0;
-		_R_goal_left_hand.setZero();
-		_R_goal_left_hand(0, 2) = 1.0;
-		_R_goal_left_hand(1, 1) = 1.0;
-		_R_goal_left_hand(2, 0) = -1.0;
-		*/
+
 		_x_goal_left_hand = Model._x_left_hand;
-		//_x_goal_left_hand(1) = Model._x_left_hand(1) - 0.2;
-		_x_goal_left_hand(2) = Model._x_left_hand(2) - 0.1;
+		_x_goal_left_hand(1) = Model._x_left_hand(1) - 0.2;
+		//_x_goal_left_hand(2) = Model._x_left_hand(2) - 0.1;
 		LeftHandPosTrajectory.reset_initial(_start_time, Model._x_left_hand, Model._xdot_left_hand.head(3));
 		LeftHandPosTrajectory.update_goal(_x_goal_left_hand, _xdot_goal_left_hand, _end_time);
 		_x_goal_right_hand = Model._x_right_hand;
-		//_x_goal_right_hand(1) = Model._x_right_hand(1) + 0.2;
-		_x_goal_right_hand(2) = Model._x_right_hand(2) - 0.1;
+		_x_goal_right_hand(1) = Model._x_right_hand(1) + 0.2;
+		//_x_goal_right_hand(2) = Model._x_right_hand(2) - 0.1;
 		RightHandPosTrajectory.reset_initial(_start_time, Model._x_right_hand, Model._xdot_right_hand.head(3));
 		RightHandPosTrajectory.update_goal(_x_goal_right_hand, _xdot_goal_right_hand, _end_time);
 
@@ -145,16 +126,6 @@ void CController::control_mujoco(double time)
 
 		_R_goal_right_hand = Model._R_right_hand;
 		_R_goal_left_hand = Model._R_left_hand;
-		/*
-		_R_goal_right_hand.setZero();
-		_R_goal_right_hand(0, 2) = 1.0;
-		_R_goal_right_hand(1, 1) = -1.0;
-		_R_goal_right_hand(2, 0) = 1.0;
-		_R_goal_left_hand.setZero();
-		_R_goal_left_hand(0, 2) = 1.0;
-		_R_goal_left_hand(1, 1) = 1.0;
-		_R_goal_left_hand(2, 0) = -1.0;
-		*/
 
 		_x_goal_left_hand = Model._x_left_hand;
 		LeftHandPosTrajectory.reset_initial(_start_time, Model._x_left_hand, Model._xdot_left_hand.head(3));
@@ -543,26 +514,17 @@ void CController::ReducedHQPTaskSpaceControl()
 	//joint torque limit
 	for (int i = 0; i < 15; i++)
 	{
+		//torque limit
 		_rlb1(i) = Model._min_joint_torque(i) - Model._bg(i);
 		_rub1(i) = Model._max_joint_torque(i) - Model._bg(i);
-		
-		if (_qdot(i) >= Model._max_joint_velocity(i) * 0.8) //0.8 is margin coefficient
-		{
-			_rlb1(i) = Model._A(i, i) * 20.0 * (Model._max_joint_velocity(i) * 0.8 - _qdot(i)) - threshold;
-			_rub1(i) = Model._A(i, i) * 20.0 * (Model._max_joint_velocity(i) * 0.8 - _qdot(i)) + threshold;
-		}
-		else if (_qdot(i) <= Model._min_joint_velocity(i) * 0.8)
-		{
-			_rlb1(i) = Model._A(i, i) * 20.0 * (Model._min_joint_velocity(i) * 0.8 - _qdot(i)) - threshold;
-			_rub1(i) = Model._A(i, i) * 20.0 * (Model._min_joint_velocity(i) * 0.8 - _qdot(i)) + threshold;
-		}
 
-		double k_tanh = 5.0;
-		if (abs(Model._min_joint_position(i) - _q(i)) <= abs(Model._max_joint_position(i) - _q(i)))
+		//joint velocity limit
+		double k_tanh = 1.0;
+		if (abs(Model._min_joint_velocity(i) - _qdot(i)) <= abs(Model._max_joint_velocity(i) - _qdot(i)))
 		{
-			if (_q(i) > Model._min_joint_position(i))
+			if (_qdot(i) > Model._min_joint_velocity(i))
 			{
-				_rlb1(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_q(i) - Model._min_joint_position(i))) + Model._max_joint_torque(i);
+				_rlb1(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_qdot(i) - Model._min_joint_velocity(i))) + Model._max_joint_torque(i);
 			}
 			else
 			{
@@ -572,9 +534,9 @@ void CController::ReducedHQPTaskSpaceControl()
 		}
 		else
 		{
-			if (_q(i) < Model._max_joint_position(i))
+			if (_qdot(i) < Model._max_joint_velocity(i))
 			{
-				_rub1(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_q(i) - Model._max_joint_position(i))) + Model._min_joint_torque(i);
+				_rub1(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_qdot(i) - Model._max_joint_velocity(i))) + Model._min_joint_torque(i);
 			}
 			else
 			{
@@ -582,6 +544,46 @@ void CController::ReducedHQPTaskSpaceControl()
 			}
 			_rlb1(i) = Model._min_joint_torque(i);
 		}
+
+		//joint position limit
+		k_tanh = 5.0;
+		double tau_lb_tmp = 0.0;
+		double tau_ub_tmp = 0.0;
+		if (abs(Model._min_joint_position(i) - _q(i)) <= abs(Model._max_joint_position(i) - _q(i)))
+		{
+			if (_q(i) > Model._min_joint_position(i))
+			{
+				tau_lb_tmp = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_q(i) - Model._min_joint_position(i))) + Model._max_joint_torque(i);
+			}
+			else
+			{
+				tau_lb_tmp = Model._max_joint_torque(i) - 0.05;
+			}
+			tau_ub_tmp = Model._max_joint_torque(i);
+		}
+		else
+		{
+			if (_q(i) < Model._max_joint_position(i))
+			{
+				tau_ub_tmp = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_q(i) - Model._max_joint_position(i))) + Model._min_joint_torque(i);
+			}
+			else
+			{
+				tau_ub_tmp = Model._min_joint_torque(i) + 0.05;
+			}
+			tau_lb_tmp = Model._min_joint_torque(i);
+		}
+
+		_rlb1(i) = tau_lb_tmp;
+		_rub1(i) = tau_ub_tmp;
+/*		if (tau_lb_tmp > _rlb2(i))
+		{
+			_rlb2(i) = tau_lb_tmp;
+		}
+		if (tau_ub_tmp < _rub2(i))
+		{
+			_rub2(i) = tau_ub_tmp;
+		}*/
 	}
 	//task limit	
 	for (int i = 0; i < 12; i++)
@@ -646,45 +648,72 @@ void CController::ReducedHQPTaskSpaceControl()
 	{
 		_rlb2(i) = Model._min_joint_torque(i) - Model._bg(i);
 		_rub2(i) = Model._max_joint_torque(i) - Model._bg(i);
-		
-		if (_qdot(i) >= Model._max_joint_velocity(i) * 0.8) //0.8 is margin coefficient
+
+		//joint velocity limit
+		double k_tanh = 1.0;
+		if (abs(Model._min_joint_velocity(i) - _qdot(i)) <= abs(Model._max_joint_velocity(i) - _qdot(i)))
 		{
-			_rlb2(i) = Model._A(i, i) * 20.0 * (Model._max_joint_velocity(i) * 0.8 - _qdot(i)) - threshold;
-			_rub2(i) = Model._A(i, i) * 20.0 * (Model._max_joint_velocity(i) * 0.8 - _qdot(i)) + threshold;
-			cout << "Max joint " << i <<", qdot" << _qdot(i) << "vel d" << Model._max_joint_velocity(i) * 0.8 << endl;
+			if (_qdot(i) > Model._min_joint_velocity(i))
+			{
+				_rlb2(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_qdot(i) - Model._min_joint_velocity(i))) + Model._max_joint_torque(i);
+			}
+			else
+			{
+				_rlb2(i) = Model._max_joint_torque(i) - 0.05;
+			}
+			_rub2(i) = Model._max_joint_torque(i);
 		}
-		else if (_qdot(i) <= Model._min_joint_velocity(i) * 0.8)
+		else
 		{
-			_rlb2(i) = Model._A(i, i) * 20.0 * (Model._min_joint_velocity(i) * 0.8 - _qdot(i)) - threshold;
-			_rub2(i) = Model._A(i, i) * 20.0 * (Model._min_joint_velocity(i) * 0.8 - _qdot(i)) + threshold;
-			cout << "Min joint " << i << ", qdot" << _qdot(i) << "vel d" << Model._min_joint_velocity(i) * 0.8 << endl;
+			if (_qdot(i) < Model._max_joint_velocity(i))
+			{
+				_rub2(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_qdot(i) - Model._max_joint_velocity(i))) + Model._min_joint_torque(i);
+			}
+			else
+			{
+				_rub2(i) = Model._min_joint_torque(i) + 0.05;				
+			}
+			_rlb2(i) = Model._min_joint_torque(i);
 		}
 
-		double k_tanh = 5.0;
+		//joint position limit
+		k_tanh = 5.0;
+		double tau_lb_tmp = 0.0;
+		double tau_ub_tmp = 0.0;
 		if(abs(Model._min_joint_position(i) - _q(i)) <= abs(Model._max_joint_position(i) - _q(i)))
 		{
 		  if(_q(i) > Model._min_joint_position(i))
 		  {
-			  _rlb2(i) = -(Model._max_joint_torque(i)- Model._min_joint_torque(i)) * tanh(k_tanh*(_q(i)- Model._min_joint_position(i))) + Model._max_joint_torque(i);
+			  tau_lb_tmp = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_q(i) - Model._min_joint_position(i))) + Model._max_joint_torque(i);
 		  }
 		  else
 		  {
-			  _rlb2(i) = Model._max_joint_torque(i) - 0.05;
-		  }
-		  _rub2(i) = Model._max_joint_torque(i);
+			  tau_lb_tmp = Model._max_joint_torque(i) - 0.05;
+		  }		  
+		  tau_ub_tmp = Model._max_joint_torque(i);
 		}
 		else
 		{
 		  if(_q(i) < Model._max_joint_position(i))
 		  {
-			  _rub2(i) = -(Model._max_joint_torque(i)- Model._min_joint_torque(i)) *tanh(k_tanh*(_q(i)- Model._max_joint_position(i))) + Model._min_joint_torque(i);
+			  tau_ub_tmp = -(Model._max_joint_torque(i)- Model._min_joint_torque(i)) *tanh(k_tanh*(_q(i)- Model._max_joint_position(i))) + Model._min_joint_torque(i);
 		  }
 		  else
 		  {
-			  _rub2(i) = Model._min_joint_torque(i) + 0.05;
+			  tau_ub_tmp = Model._min_joint_torque(i) + 0.05;
 		  }
-		  _rlb2(i) = Model._min_joint_torque(i);
+		  tau_lb_tmp = Model._min_joint_torque(i);
 		}
+		_rlb2(i) = tau_lb_tmp;
+		_rub2(i) = tau_ub_tmp;
+/*		if (tau_lb_tmp > _rlb2(i))
+		{
+			_rlb2(i) = tau_lb_tmp;
+		}
+		if (tau_ub_tmp < _rub2(i))
+		{
+			_rub2(i) = tau_ub_tmp;
+		}*/
 	}
 	//task limit
 	for (int i = 0; i < 15; i++)
@@ -718,9 +747,9 @@ void CController::Initialize()
 	_pre_qdot.setZero(_dofj);
 
 	_q_home.setZero(_dofj);
-	_q_home(0) = -0.2;
-	_q_home(1) = -30.0 * DEG2RAD; //LShP
-	_q_home(8) = 30.0 * DEG2RAD; //RShP
+	_q_home(0) = 0.0;
+	_q_home(1) = 30.0 * DEG2RAD; //LShP
+	_q_home(8) = -30.0 * DEG2RAD; //RShP
 	_q_home(2) = 20.0 * DEG2RAD; //LShR
 	_q_home(9) = -20.0 * DEG2RAD; //RShR
 	_q_home(4) = 80.0 * DEG2RAD; //LElP
