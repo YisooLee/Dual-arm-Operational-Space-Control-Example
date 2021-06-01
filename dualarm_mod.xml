@@ -42,9 +42,9 @@
         <geom name="ground" pos="0 0 0" type="plane" size="10 10 .05" rgba=".7 .7 .7 1" material="MatPlane"/>
 
         <geom type="mesh" rgba="0.50196 1 0.50196 1" mesh="base_link" />
-        <body name="body_link" pos="0 0.1598 0.9227" quat="0.5 0.5 0.5 0.5">
+        <body name="body_link" pos="0 0.1598 0.5727" quat="0.5 0.5 0.5 0.5">
             <inertial pos="0.070879 0.38092 3.2435e-05" quat="0.999702 0.0241074 -0.0011948 0.0035823" mass="5.9559" diaginertia="0.0175723 0.0128361 0.0126716" />
-            <joint name="j0" pos="0 0 0" axis="0 1 0" type="slide" limited="true" range="-0.3 0.3" damping="2" frictionloss="1" />
+            <joint name="j0" pos="0 0 0" axis="0 1 0" type="slide" limited="true" range="-0.35 0.35" damping="2" frictionloss="1" />
             <geom type="mesh" rgba="0.89804 0.91765 0.92941 1" mesh="body_link" />
             <body name="LShP_Link" pos="0.0762 0.3943 -0.121">
                 <inertial pos="-0.013031 -8.3122e-05 -0.078324" quat="0.5 0.5 -0.5 0.5" mass="2.0773" diaginertia="1.17744 1.17744 1.17744" />
