@@ -18,6 +18,7 @@
 using namespace std;
 using namespace Eigen;
 
+
 class CController
 {
 
@@ -27,7 +28,7 @@ public:
 	void read(double time, double* q, double* qdot);
 	//void write(double* qdes, double* qdotdes);
 	void write(double* torque);
-	void control_mujoco(double time);
+	void control_mujoco();
 
 public:
 	VectorXd _torque;
@@ -36,6 +37,8 @@ public:
 
 private:
 	double _t;
+	bool _bool_init;
+	double _init_t;
 	double _dt;
 	double _pre_t;
 	int _dofj; //number of joint
@@ -47,6 +50,14 @@ private:
 	VectorXd _pre_qdot;
 
 	void Initialize();
+
+	//plan
+	void reset_target(double motion_time, VectorXd target_joint_position);
+	void reset_target(double motion_time, Vector3d target_pos_lh, Vector3d target_ori_lh, Vector3d target_pos_rh, Vector3d target_ori_rh);
+	void motionPlan();
+	int _cnt_plan;
+	VectorXd _time_plan;
+	VectorXi _bool_plan;
 
 	//controller
 	double _kpj; //joint control P gain
@@ -74,6 +85,11 @@ private:
 	MatrixXd _J_ori_T_hands; // 15x6	
 
 	//operational space variables (two hand)
+	VectorXd _x_left_hand; //state
+	VectorXd _x_right_hand; //state
+	VectorXd _xdot_left_hand; //state
+	VectorXd _xdot_right_hand; //state
+
 	MatrixXd _Lambda_hands; //inertia matri 12x12
 	MatrixXd _Null_hands; //null space projection matrix 15x15	
 	MatrixXd _Id_15, _Id_12;
@@ -106,7 +122,8 @@ private:
 	VectorXd _rg1, _rg2, _rlbA1, _rlbA2, _rubA1, _rubA2, _rlb1, _rlb2, _rub1, _rub2;
 	
 	//motion trajectory
-	double _start_time, _end_time;
+	double _start_time, _end_time, _motion_time;
+
 	//joint space
 	bool _bool_joint_motion;
 	CTrajectory JointTrajectory; //size = joint dof
@@ -114,21 +131,29 @@ private:
 	VectorXd _qdot_goal;
 	VectorXd _q_des;//desired joint angle vector
 	VectorXd _qdot_des;//desired joint velocity vector
-	//operational space (two hand)
-	bool _bool_hands_motion;
-	CTrajectory RightHandPosTrajectory; //size = 3
-	CTrajectory LeftHandPosTrajectory; //size = 3
-	Vector3d _x_goal_left_hand;
-	Vector3d _xdot_goal_left_hand;
-	Vector3d _x_des_left_hand;
-	Vector3d _xdot_des_left_hand;
-	Vector3d _x_goal_right_hand;
-	Vector3d _xdot_goal_right_hand;
-	Vector3d _x_des_right_hand;
-	Vector3d _xdot_des_right_hand;
 
-	Matrix3d _R_goal_left_hand; 
-	Matrix3d _R_goal_right_hand;
+	//operational space (two hand)
+	bool _bool_ee_motion;
+	CTrajectory RightHandTrajectory; //size = 6
+	CTrajectory LeftHandTrajectory; //size = 6
+
+	VectorXd _x_goal_left_hand;
+	VectorXd _xdot_goal_left_hand;
+	VectorXd _x_des_left_hand;
+	VectorXd _xdot_des_left_hand;
+	VectorXd _x_goal_right_hand;
+	VectorXd _xdot_goal_right_hand;
+	VectorXd _x_des_right_hand;
+	VectorXd _xdot_des_right_hand;
+	Matrix3d _R_des_left_hand;
+	Matrix3d _R_des_right_hand;
+
+	Vector3d _pos_goal_left_hand;
+	Vector3d _rpy_goal_left_hand;
+	Vector3d _pos_goal_right_hand;
+	Vector3d _rpy_goal_right_hand;
+
+	
 };
 
 #endif

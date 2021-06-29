@@ -28,6 +28,7 @@ void CTrajectory::Initialize()
 	_init_vel.setZero(_vector_size);
 	_goal_pos.setZero(_vector_size);
 	_goal_vel.setZero(_vector_size);
+	_bool_trajectory_complete = false;
 }
 
 void CTrajectory::reset_initial(double time0, VectorXd init_pos, VectorXd init_vel)
@@ -38,6 +39,8 @@ void CTrajectory::reset_initial(double time0, VectorXd init_pos, VectorXd init_v
 	_time_start = time0;
 	_init_pos = init_pos;
 	_init_vel = init_vel;
+
+	_bool_trajectory_complete = false;
 }
 
 
@@ -104,4 +107,17 @@ void CTrajectory::check_vector_size(VectorXd X)
 	{
 		cout << "Warning!!! -- Vector size in CTrajectory mismatch occured! --" << endl << endl;
 	}
+}
+
+int CTrajectory::check_trajectory_complete() //1 = time when trajectory complete
+{
+	int diff = 0;
+	bool previous_bool = _bool_trajectory_complete;
+	if (_time >= _time_end && _bool_trajectory_complete == false)
+	{
+		_bool_trajectory_complete = true;
+		diff = 1;
+	}
+
+	return diff;
 }

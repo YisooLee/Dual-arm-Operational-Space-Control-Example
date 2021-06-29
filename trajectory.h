@@ -21,12 +21,14 @@ public:
 	void reset_initial(double time0, VectorXd init_pos, VectorXd init_vel);
 	void update_time(double time);
 	void update_goal(VectorXd goal_pos, VectorXd goal_vel, double goal_time);
+	int check_trajectory_complete();
 	VectorXd position_cubicSpline();
 	VectorXd velocity_cubicSpline();
 
 private:
 	void Initialize();
 	void check_vector_size(VectorXd X);
+	bool _bool_trajectory_complete;
 };
 
 #endif

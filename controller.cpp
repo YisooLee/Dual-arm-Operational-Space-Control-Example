@@ -12,7 +12,13 @@ CController::~CController()
 
 void CController::read(double t, double* q, double* qdot)
 {	
-	
+	_t = t;
+	if (_bool_init == true)
+	{
+		_init_t = _t;
+		_bool_init = false;
+	}
+
 	_dt = t - _pre_t;
 	_pre_t = t;
 
@@ -35,128 +41,123 @@ void CController::write(double* torque)
 	}
 }
 
-void CController::control_mujoco(double time)
+void CController::reset_target(double motion_time, VectorXd target_joint_position)
 {
-	_t = time;
+	_control_mode = 1;
+	_motion_time = motion_time;
+	_bool_joint_motion = false;
+	_bool_ee_motion = false;
+
+	_q_goal = target_joint_position.head(15);
+	_qdot_goal.setZero();
+}
+
+void CController::reset_target(double motion_time, Vector3d target_pos_lh, Vector3d target_ori_lh, Vector3d target_pos_rh, Vector3d target_ori_rh)
+{
+	_control_mode = 4;
+	_motion_time = motion_time;
+	_bool_joint_motion = false;
+	_bool_ee_motion = false;
+
+	_x_goal_left_hand.head(3) = target_pos_lh;
+	_x_goal_left_hand.tail(3) = target_ori_lh;
+	_xdot_goal_left_hand.setZero();
+	_x_goal_right_hand.head(3) = target_pos_rh;
+	_x_goal_right_hand.tail(3) = target_ori_rh;
+	_xdot_goal_right_hand.setZero();
+}
+
+void CController::motionPlan()
+{
+	_time_plan(1) = 2.0; //move home position
+	_time_plan(2) = 1.0; //wait
+	_time_plan(3) = 2.0; //task space motion
+
+	if (_bool_plan(_cnt_plan) == 1)
+	{
+		_cnt_plan = _cnt_plan + 1;
+		if (_cnt_plan == 1)
+		{
+			reset_target(_time_plan(_cnt_plan), _q_home);
+		}
+		else if (_cnt_plan == 2)
+		{
+			reset_target(_time_plan(_cnt_plan), _q);
+		}
+		else if (_cnt_plan == 3)
+		{
+			_pos_goal_left_hand(0) = _x_left_hand(0) - 0.1;
+			_pos_goal_left_hand(1) = _x_left_hand(1) - 0.0;
+			_pos_goal_left_hand(2) = _x_left_hand(2) - 0.0;
+			_rpy_goal_left_hand(0) = _x_left_hand(3);
+			_rpy_goal_left_hand(1) = _x_left_hand(4);
+			_rpy_goal_left_hand(2) = _x_left_hand(5) - 90.0 * DEG2RAD;
+
+			_pos_goal_right_hand(0) = _x_right_hand(0) - 0.1;
+			_pos_goal_right_hand(1) = _x_right_hand(1) - 0.0;
+			_pos_goal_right_hand(2) = _x_right_hand(2) - 0.0;
+			_rpy_goal_right_hand(0) = _x_right_hand(3);
+			_rpy_goal_right_hand(1) = _x_right_hand(4);
+			_rpy_goal_right_hand(2) = _x_right_hand(5) + 90.0 * DEG2RAD;
+
+			reset_target(_time_plan(_cnt_plan), _pos_goal_left_hand, _rpy_goal_left_hand, _pos_goal_right_hand, _rpy_goal_right_hand);
+		}
+	}
+}
+
+void CController::control_mujoco()
+{	
 	ModelUpdate();	
-
-	//Motion planning
-	if (_t < 1.0 && _bool_joint_motion == false)
-	{
-		_control_mode = 1;
-
-		_start_time = 0.0;
-		_end_time = 1.0;		
-		_q_goal.setZero();
-		_qdot_goal.setZero();
-		JointTrajectory.reset_initial(_start_time, _q, _qdot);
-		JointTrajectory.update_goal(_q_goal, _qdot_goal, _end_time);
-		_bool_joint_motion = true;		
-		cout << endl << "Maintain Initial Position, t = " << _t << " s" << endl;
-
-		cout << Model._R_left_hand << endl<<endl;
-	}
-	else if (_t >= 1.0 && _t < 4.0 && _bool_joint_motion == true)
-	{
-		_control_mode = 1;
-
-		_start_time = 1.0;
-		_end_time = 4.0;
-		_q_goal.setZero();
-		_qdot_goal.setZero();
-		_q_goal = _q_home;//home position
-		JointTrajectory.reset_initial(_start_time, _q, _qdot);
-		JointTrajectory.update_goal(_q_goal, _qdot_goal, _end_time);
-		_bool_joint_motion = false;	
-
-		cout << "Start <Home Position>, t = " << _t << " s" << endl;
-	}
-	else if (_t >= 4.0 && _t < 5.0 && _bool_joint_motion == false && _bool_hands_motion == false)
-	{
-		_control_mode = 4;
-
-		_start_time = 4.0;
-		_end_time = 5.0;
-
-		_R_goal_right_hand = Model._R_right_hand;
-		_R_goal_left_hand = Model._R_left_hand;
-
-		_x_goal_left_hand = Model._x_left_hand; //set as current state
-		LeftHandPosTrajectory.reset_initial(_start_time, Model._x_left_hand, Model._xdot_left_hand.head(3));
-		LeftHandPosTrajectory.update_goal(_x_goal_left_hand, _xdot_goal_left_hand, _end_time);
-		_x_goal_right_hand = Model._x_right_hand; //set as current state
-		RightHandPosTrajectory.reset_initial(_start_time, Model._x_right_hand, Model._xdot_right_hand.head(3));
-		RightHandPosTrajectory.update_goal(_x_goal_right_hand, _xdot_goal_right_hand, _end_time);
-
-		_bool_hands_motion = true;
-
-		cout << "Start Operational Sapce Control - Regulate Initial Hand Positions, t = " << _t << " s" << endl;
-	}
-	else if (_t >= 5.0 && _t < 6.0 && _bool_joint_motion == false && _bool_hands_motion == true)
-	{
-		_control_mode = 4;
-
-		_start_time = 5.0;
-		_end_time = 6.0;
-
-		_R_goal_right_hand = Model._R_right_hand;
-		_R_goal_left_hand = Model._R_left_hand;
-
-		_x_goal_left_hand = Model._x_left_hand;
-		_x_goal_left_hand(1) = Model._x_left_hand(1) - 0.2;
-		//_x_goal_left_hand(2) = Model._x_left_hand(2) - 0.1;
-		LeftHandPosTrajectory.reset_initial(_start_time, Model._x_left_hand, Model._xdot_left_hand.head(3));
-		LeftHandPosTrajectory.update_goal(_x_goal_left_hand, _xdot_goal_left_hand, _end_time);
-		_x_goal_right_hand = Model._x_right_hand;
-		_x_goal_right_hand(1) = Model._x_right_hand(1) + 0.2;
-		//_x_goal_right_hand(2) = Model._x_right_hand(2) - 0.1;
-		RightHandPosTrajectory.reset_initial(_start_time, Model._x_right_hand, Model._xdot_right_hand.head(3));
-		RightHandPosTrajectory.update_goal(_x_goal_right_hand, _xdot_goal_right_hand, _end_time);
-
-		_bool_hands_motion = false;
-
-		cout << "Operational Sapce Control - Hand Motions, t = " << _t << " s" << endl;
-	}
-	else if (_t >= 6.0 && _bool_joint_motion == false && _bool_hands_motion == false)
-	{
-		_control_mode = 4;
-
-		_start_time = 6.0;
-		_end_time = 6.1;
-
-		_R_goal_right_hand = Model._R_right_hand;
-		_R_goal_left_hand = Model._R_left_hand;
-
-		_x_goal_left_hand = Model._x_left_hand;
-		LeftHandPosTrajectory.reset_initial(_start_time, Model._x_left_hand, Model._xdot_left_hand.head(3));
-		LeftHandPosTrajectory.update_goal(_x_goal_left_hand, _xdot_goal_left_hand, _end_time);
-		_x_goal_right_hand = Model._x_right_hand;
-		RightHandPosTrajectory.reset_initial(_start_time, Model._x_right_hand, Model._xdot_right_hand.head(3));
-		RightHandPosTrajectory.update_goal(_x_goal_right_hand, _xdot_goal_right_hand, _end_time);
-
-		_bool_hands_motion = true;
-
-		cout << "Operational Sapce Control - Regulate Hand Positions, t = " << _t << " s" << endl;
-	}
+	motionPlan();
 	
 	//Control
 	if (_control_mode == 1) //joint space control
 	{
+		if (_t - _init_t < 0.1 && _bool_joint_motion == false)
+		{
+			_start_time = _init_t;
+			_end_time = _start_time + _motion_time;
+			JointTrajectory.reset_initial(_start_time, _q, _qdot);
+			JointTrajectory.update_goal(_q_goal, _qdot_goal, _end_time);
+			_bool_joint_motion = true;
+		}
 		JointTrajectory.update_time(_t);
 		_q_des = JointTrajectory.position_cubicSpline();
 		_qdot_des = JointTrajectory.velocity_cubicSpline();
 
 		JointControl();
+
+		if (JointTrajectory.check_trajectory_complete() == 1)
+		{
+			_bool_plan(_cnt_plan) = 1;
+			_bool_init = true;
+		}
 	}
 	else if (_control_mode == 2 || _control_mode == 3 || _control_mode == 4) //task space hand control
 	{
-		LeftHandPosTrajectory.update_time(_t);
-		_x_des_left_hand = LeftHandPosTrajectory.position_cubicSpline();
-		_xdot_des_left_hand = LeftHandPosTrajectory.velocity_cubicSpline();
+		if (_t - _init_t < 0.1 && _bool_ee_motion == false)
+		{
+			_start_time = _init_t;
+			_end_time = _start_time + _motion_time;
+			LeftHandTrajectory.reset_initial(_start_time, _x_left_hand, _xdot_left_hand);
+			LeftHandTrajectory.update_goal(_x_goal_left_hand, _xdot_goal_left_hand, _end_time);
+			RightHandTrajectory.reset_initial(_start_time, _x_right_hand, _xdot_right_hand);
+			RightHandTrajectory.update_goal(_x_goal_right_hand, _xdot_goal_right_hand, _end_time);
+			_bool_ee_motion = true;
+		}
+		LeftHandTrajectory.update_time(_t);
+		_x_des_left_hand = LeftHandTrajectory.position_cubicSpline();
+		_xdot_des_left_hand = LeftHandTrajectory.velocity_cubicSpline();
 
-		RightHandPosTrajectory.update_time(_t);
-		_x_des_right_hand = RightHandPosTrajectory.position_cubicSpline();
-		_xdot_des_right_hand = RightHandPosTrajectory.velocity_cubicSpline();
+		RightHandTrajectory.update_time(_t);
+		_x_des_right_hand = RightHandTrajectory.position_cubicSpline();
+		_xdot_des_right_hand = RightHandTrajectory.velocity_cubicSpline();
+
+		if (LeftHandTrajectory.check_trajectory_complete() == 1 || RightHandTrajectory.check_trajectory_complete() == 1)
+		{
+			_bool_plan(_cnt_plan) = 1;
+			_bool_init = true;
+		}
 
 		if (_control_mode == 2)
 		{
@@ -208,6 +209,13 @@ void CController::ModelUpdate()
 		}		
 	}
 	_Jdot_qdot = _Jdot_hands * _qdot;
+
+	_x_left_hand.head(3) = Model._x_left_hand;
+	_x_left_hand.tail(3) = CustomMath::GetBodyRotationAngle(Model._R_left_hand);
+	_x_right_hand.head(3) = Model._x_right_hand;
+	_x_right_hand.tail(3) = CustomMath::GetBodyRotationAngle(Model._R_right_hand);
+	_xdot_left_hand = Model._xdot_left_hand;
+	_xdot_right_hand = Model._xdot_right_hand;
 }
 
 
@@ -224,18 +232,17 @@ void CController::OperationalSpaceControl()
 	_kd = 20.0;
 
 	_x_err_left_hand = _x_des_left_hand - Model._x_left_hand;
-	_R_err_left_hand.setZero();
-	_R_err_left_hand = -CustomMath::getPhi(Model._R_left_hand, _R_goal_left_hand);
+	_R_des_left_hand = CustomMath::GetBodyRotationMatrix(_x_des_left_hand(3), _x_des_left_hand(4), _x_des_left_hand(5));	
+	_R_err_left_hand = -CustomMath::getPhi(Model._R_left_hand, _R_des_left_hand);
 	_x_err_right_hand = _x_des_right_hand - Model._x_right_hand;
-	_R_err_right_hand.setZero();
-	_R_err_right_hand = -CustomMath::getPhi(Model._R_right_hand, _R_goal_right_hand);
+	_R_des_right_hand = CustomMath::GetBodyRotationMatrix(_x_des_right_hand(3), _x_des_right_hand(4), _x_des_right_hand(5));
+	_R_err_right_hand = -CustomMath::getPhi(Model._R_right_hand, _R_des_right_hand);
 
 	_xdot_err_left_hand = _xdot_des_left_hand - Model._xdot_left_hand.segment(0, 3);
 	_Rdot_err_left_hand = -Model._xdot_left_hand.segment(3, 3); //only daming for orientation
 	_xdot_err_right_hand = _xdot_des_right_hand - Model._xdot_right_hand.segment(0, 3);
 	_Rdot_err_right_hand = -Model._xdot_right_hand.segment(3, 3); //only daming for orientation	
-
-	cout << _x_err_left_hand.transpose() << endl;
+	
 	
 	// set 1
 	// 1st: hands pos and ori, 2nd: joint dampings
@@ -291,12 +298,11 @@ void CController::HQPTaskSpaceControl()
 	_kd = 20.0;
 
 	_x_err_left_hand = _x_des_left_hand - Model._x_left_hand;
-	_R_err_left_hand.setZero();
-	_R_err_left_hand = -CustomMath::getPhi(Model._R_left_hand, _R_goal_left_hand);
+	_R_des_left_hand = CustomMath::GetBodyRotationMatrix(_x_des_left_hand(3), _x_des_left_hand(4), _x_des_left_hand(5));
+	_R_err_left_hand = -CustomMath::getPhi(Model._R_left_hand, _R_des_left_hand);
 	_x_err_right_hand = _x_des_right_hand - Model._x_right_hand;
-	_R_err_right_hand.setZero();
-	_R_err_right_hand = -CustomMath::getPhi(Model._R_right_hand, _R_goal_right_hand);
-
+	_R_des_right_hand = CustomMath::GetBodyRotationMatrix(_x_des_right_hand(3), _x_des_right_hand(4), _x_des_right_hand(5));
+	_R_err_right_hand = -CustomMath::getPhi(Model._R_right_hand, _R_des_right_hand);
 
 	_xdot_err_left_hand = _xdot_des_left_hand - Model._xdot_left_hand.segment(0, 3);
 	_Rdot_err_left_hand = -Model._xdot_left_hand.segment(3, 3); //only daming for orientation
@@ -307,6 +313,7 @@ void CController::HQPTaskSpaceControl()
 	_xddot_star.segment(3, 3) = _kp * _R_err_left_hand + _kd * _Rdot_err_left_hand;//left hand orientation control
 	_xddot_star.segment(6, 3) = _kp * _x_err_right_hand + _kd * _xdot_err_right_hand;//right hand position control
 	_xddot_star.segment(9, 3) = _kp * _R_err_right_hand + _kd * _Rdot_err_right_hand;//right hand orientation control
+
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Solve HQP   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -458,9 +465,11 @@ void CController::ReducedHQPTaskSpaceControl()
 	_kd = 20.0;
 
 	_x_err_left_hand = _x_des_left_hand - Model._x_left_hand;
-	_R_err_left_hand = -CustomMath::getPhi(Model._R_left_hand, _R_goal_left_hand);	
+	_R_des_left_hand = CustomMath::GetBodyRotationMatrix(_x_des_left_hand(3), _x_des_left_hand(4), _x_des_left_hand(5));
+	_R_err_left_hand = -CustomMath::getPhi(Model._R_left_hand, _R_des_left_hand);
 	_x_err_right_hand = _x_des_right_hand - Model._x_right_hand;
-	_R_err_right_hand = -CustomMath::getPhi(Model._R_right_hand, _R_goal_right_hand);	
+	_R_des_right_hand = CustomMath::GetBodyRotationMatrix(_x_des_right_hand(3), _x_des_right_hand(4), _x_des_right_hand(5));
+	_R_err_right_hand = -CustomMath::getPhi(Model._R_right_hand, _R_des_right_hand);
 
 	_xdot_err_left_hand = _xdot_des_left_hand - Model._xdot_left_hand.segment(0, 3);
 	_Rdot_err_left_hand = -Model._xdot_left_hand.segment(3, 3); //only daming for orientation
@@ -471,6 +480,9 @@ void CController::ReducedHQPTaskSpaceControl()
 	_xddot_star.segment(3, 3) = _kp * _R_err_left_hand + _kd * _Rdot_err_left_hand; //left hand orientation control
 	_xddot_star.segment(6, 3) = _kp * _x_err_right_hand + _kd * _xdot_err_right_hand; //right hand position control
 	_xddot_star.segment(9, 3) = _kp * _R_err_right_hand + _kd * _Rdot_err_right_hand; //right hand orientation control
+
+
+	
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Solve rHQP   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -520,6 +532,7 @@ void CController::ReducedHQPTaskSpaceControl()
 
 		//joint velocity limit
 		double k_tanh = 1.0;
+		/*
 		if (abs(Model._min_joint_velocity(i) - _qdot(i)) <= abs(Model._max_joint_velocity(i) - _qdot(i)))
 		{
 			if (_qdot(i) > Model._min_joint_velocity(i))
@@ -543,7 +556,7 @@ void CController::ReducedHQPTaskSpaceControl()
 				_rub1(i) = Model._min_joint_torque(i) + 0.05;
 			}
 			_rlb1(i) = Model._min_joint_torque(i);
-		}
+		}*/
 
 		//joint position limit
 		k_tanh = 5.0;
@@ -557,7 +570,7 @@ void CController::ReducedHQPTaskSpaceControl()
 			}
 			else
 			{
-				tau_lb_tmp = Model._max_joint_torque(i) - 0.05;
+				tau_lb_tmp = Model._max_joint_torque(i) - 0.05;				
 			}
 			tau_ub_tmp = Model._max_joint_torque(i);
 		}
@@ -648,9 +661,10 @@ void CController::ReducedHQPTaskSpaceControl()
 	{
 		_rlb2(i) = Model._min_joint_torque(i) - Model._bg(i);
 		_rub2(i) = Model._max_joint_torque(i) - Model._bg(i);
-
-		//joint velocity limit
+		
 		double k_tanh = 1.0;
+		/*
+		//joint velocity limit		
 		if (abs(Model._min_joint_velocity(i) - _qdot(i)) <= abs(Model._max_joint_velocity(i) - _qdot(i)))
 		{
 			if (_qdot(i) > Model._min_joint_velocity(i))
@@ -674,8 +688,8 @@ void CController::ReducedHQPTaskSpaceControl()
 				_rub2(i) = Model._min_joint_torque(i) + 0.05;				
 			}
 			_rlb2(i) = Model._min_joint_torque(i);
-		}
-
+		}*/
+		
 		//joint position limit
 		k_tanh = 5.0;
 		double tau_lb_tmp = 0.0;
@@ -734,7 +748,10 @@ void CController::Initialize()
 {
 	_control_mode = 1; //1: joint space, 2: operational space
 
+	_bool_init = true;
+
 	_t = 0.0;
+	_init_t = 0.0;
 
 	_pre_t = 0.0;
 	_dt = 0.0;
@@ -754,28 +771,34 @@ void CController::Initialize()
 	_q_home(9) = -20.0 * DEG2RAD; //RShR
 	_q_home(4) = 80.0 * DEG2RAD; //LElP
 	_q_home(11) = -80.0 * DEG2RAD; //RElP
-	_q_home(6) = -60.0 * DEG2RAD; //LWrP
-	_q_home(13) = 60.0 * DEG2RAD; //RWrP
+	_q_home(6) = -30.0 * DEG2RAD; //LWrP
+	_q_home(13) = 30.0 * DEG2RAD; //RWrP
 
 	_start_time = 0.0;
 	_end_time = 0.0;
+	_motion_time = 0.0;
 
 	_q_des.setZero(_dofj);
 	_qdot_des.setZero(_dofj);
 	_q_goal.setZero(_dofj);
 	_qdot_goal.setZero(_dofj);
 
-	_x_goal_left_hand.setZero();
-	_xdot_goal_left_hand.setZero();
-	_x_des_left_hand.setZero();
-	_xdot_des_left_hand.setZero();
-	_x_goal_right_hand.setZero();
-	_xdot_goal_right_hand.setZero();
-	_x_des_right_hand.setZero();
-	_xdot_des_right_hand.setZero();
+	_x_left_hand.setZero(6);
+	_x_right_hand.setZero(6);
+	_xdot_left_hand.setZero(6);
+	_xdot_right_hand.setZero(6);
 
-	_R_goal_left_hand.setIdentity();
-	_R_goal_right_hand.setIdentity();
+	_x_goal_left_hand.setZero(6);
+	_xdot_goal_left_hand.setZero(6);
+	_x_des_left_hand.setZero(6);
+	_xdot_des_left_hand.setZero(6);
+	_x_goal_right_hand.setZero(6);
+	_xdot_goal_right_hand.setZero(6);
+	_x_des_right_hand.setZero(6);
+	_xdot_des_right_hand.setZero(6);
+
+	_R_des_left_hand.setZero();
+	_R_des_right_hand.setZero();
 
 	_xddot_star.setZero(12);
 	_x_err_left_hand.setZero();
@@ -786,6 +809,12 @@ void CController::Initialize()
 	_R_err_right_hand.setZero();
 	_Rdot_err_left_hand.setZero();
 	_Rdot_err_right_hand.setZero();
+
+	_cnt_plan = 0;
+	_bool_plan.setZero(20);
+	_time_plan.resize(20);
+	_time_plan.setConstant(5.0);
+	reset_target(_time_plan(_cnt_plan), _q_home);
 
 	_kpj = 400.0;
 	_kdj = 40.0;
@@ -810,18 +839,23 @@ void CController::Initialize()
 	_Null_hands_pos.setZero(15, 15);
 	_Null_hands_ori.setZero(15, 15);
 
+	_pos_goal_left_hand.setZero();
+	_rpy_goal_left_hand.setZero();
+	_pos_goal_right_hand.setZero();
+	_rpy_goal_right_hand.setZero();
+
 
 	_Id_15.setIdentity(15, 15);
 	_Id_12.setIdentity(12, 12);
 
 	_bool_joint_motion = false;
-	_bool_hands_motion = false;
+	_bool_ee_motion = false;
 
 	_zero_vec.setZero(_dofj);
 
 	JointTrajectory.set_size(15);
-	LeftHandPosTrajectory.set_size(3);
-	RightHandPosTrajectory.set_size(3);
+	LeftHandTrajectory.set_size(6);
+	RightHandTrajectory.set_size(6);
 
 	//HQP
 	HQP_P1.InitializeProblemSize(42,27); //variable size = (joint dof)*2+(task dof), constraint size = (joint dof) + (task dof) 

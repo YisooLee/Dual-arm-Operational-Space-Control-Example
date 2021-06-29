@@ -1859,7 +1859,7 @@ void simulate(void)
                 //--------------------------------------------------------------------------------------------------//
                 // controller                                
                 Control.read(d->time, d->qpos, d->qvel);
-                Control.control_mujoco(d->time);
+                Control.control_mujoco();
                 Control.write(d->ctrl);
                 //--------------------------------------------------------------------------------------------------//
                 //--------------------------------------------------------------------------------------------------//
@@ -2039,7 +2039,7 @@ int main(int argc, const char** argv)
 {
     // initialize everything
     init();	
-    char str[100] = "E:/libraries/mujoco200/model/dualarm_mod.xml";
+    char str[100] = "E:/libraries/mujoco200/model/dualarm_mod.urdf";
     //char str[100] = "E:/libraries/mujoco200/model/dualarm.urdf";
 
     memcpy(filename, str, sizeof(str));
