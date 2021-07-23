@@ -86,19 +86,19 @@ void CController::motionPlan()
 		}
 		else if (_cnt_plan == 3)
 		{
-			_pos_goal_left_hand(0) = _x_left_hand(0) - 0.1;
+			_pos_goal_left_hand(0) = _x_left_hand(0) + 0.1;
 			_pos_goal_left_hand(1) = _x_left_hand(1) - 0.0;
 			_pos_goal_left_hand(2) = _x_left_hand(2) - 0.0;
 			_rpy_goal_left_hand(0) = _x_left_hand(3);
 			_rpy_goal_left_hand(1) = _x_left_hand(4);
-			_rpy_goal_left_hand(2) = _x_left_hand(5) - 90.0 * DEG2RAD;
+			_rpy_goal_left_hand(2) = _x_left_hand(5);// -90.0 * DEG2RAD;
 
-			_pos_goal_right_hand(0) = _x_right_hand(0) - 0.1;
+			_pos_goal_right_hand(0) = _x_right_hand(0) + 0.1;
 			_pos_goal_right_hand(1) = _x_right_hand(1) - 0.0;
 			_pos_goal_right_hand(2) = _x_right_hand(2) - 0.0;
 			_rpy_goal_right_hand(0) = _x_right_hand(3);
 			_rpy_goal_right_hand(1) = _x_right_hand(4);
-			_rpy_goal_right_hand(2) = _x_right_hand(5) + 90.0 * DEG2RAD;
+			_rpy_goal_right_hand(2) = _x_right_hand(5);// +90.0 * DEG2RAD;
 
 			reset_target(_time_plan(_cnt_plan), _pos_goal_left_hand, _rpy_goal_left_hand, _pos_goal_right_hand, _rpy_goal_right_hand);
 		}
@@ -480,9 +480,7 @@ void CController::ReducedHQPTaskSpaceControl()
 	_xddot_star.segment(3, 3) = _kp * _R_err_left_hand + _kd * _Rdot_err_left_hand; //left hand orientation control
 	_xddot_star.segment(6, 3) = _kp * _x_err_right_hand + _kd * _xdot_err_right_hand; //right hand position control
 	_xddot_star.segment(9, 3) = _kp * _R_err_right_hand + _kd * _Rdot_err_right_hand; //right hand orientation control
-
-
-	
+		
 
 	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
 	// Solve rHQP   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
@@ -531,7 +529,7 @@ void CController::ReducedHQPTaskSpaceControl()
 		_rub1(i) = Model._max_joint_torque(i) - Model._bg(i);
 
 		//joint velocity limit
-		double k_tanh = 1.0;
+		//double k_tanh = 1.0;
 		/*
 		if (abs(Model._min_joint_velocity(i) - _qdot(i)) <= abs(Model._max_joint_velocity(i) - _qdot(i)))
 		{
@@ -559,7 +557,7 @@ void CController::ReducedHQPTaskSpaceControl()
 		}*/
 
 		//joint position limit
-		k_tanh = 5.0;
+/*		k_tanh = 5.0;
 		double tau_lb_tmp = 0.0;
 		double tau_ub_tmp = 0.0;
 		if (abs(Model._min_joint_position(i) - _q(i)) <= abs(Model._max_joint_position(i) - _q(i)))
@@ -589,7 +587,7 @@ void CController::ReducedHQPTaskSpaceControl()
 
 		_rlb1(i) = tau_lb_tmp;
 		_rub1(i) = tau_ub_tmp;
-/*		if (tau_lb_tmp > _rlb2(i))
+		if (tau_lb_tmp > _rlb2(i))
 		{
 			_rlb2(i) = tau_lb_tmp;
 		}
@@ -598,6 +596,8 @@ void CController::ReducedHQPTaskSpaceControl()
 			_rub2(i) = tau_ub_tmp;
 		}*/
 	}
+	_rlb2(0) = 0.0 - threshold;
+	_rub2(0) = 0.0 + threshold;
 	//task limit	
 	for (int i = 0; i < 12; i++)
 	{
@@ -662,7 +662,7 @@ void CController::ReducedHQPTaskSpaceControl()
 		_rlb2(i) = Model._min_joint_torque(i) - Model._bg(i);
 		_rub2(i) = Model._max_joint_torque(i) - Model._bg(i);
 		
-		double k_tanh = 1.0;
+		//double k_tanh = 1.0;
 		/*
 		//joint velocity limit		
 		if (abs(Model._min_joint_velocity(i) - _qdot(i)) <= abs(Model._max_joint_velocity(i) - _qdot(i)))
@@ -691,7 +691,7 @@ void CController::ReducedHQPTaskSpaceControl()
 		}*/
 		
 		//joint position limit
-		k_tanh = 5.0;
+/*		k_tanh = 5.0;
 		double tau_lb_tmp = 0.0;
 		double tau_ub_tmp = 0.0;
 		if(abs(Model._min_joint_position(i) - _q(i)) <= abs(Model._max_joint_position(i) - _q(i)))
@@ -720,7 +720,7 @@ void CController::ReducedHQPTaskSpaceControl()
 		}
 		_rlb2(i) = tau_lb_tmp;
 		_rub2(i) = tau_ub_tmp;
-/*		if (tau_lb_tmp > _rlb2(i))
+		if (tau_lb_tmp > _rlb2(i))
 		{
 			_rlb2(i) = tau_lb_tmp;
 		}
@@ -729,6 +729,8 @@ void CController::ReducedHQPTaskSpaceControl()
 			_rub2(i) = tau_ub_tmp;
 		}*/
 	}
+	_rlb2(0) = 0.0 - threshold;
+	_rub2(0) = 0.0 + threshold;
 	//task limit
 	for (int i = 0; i < 15; i++)
 	{
@@ -741,7 +743,9 @@ void CController::ReducedHQPTaskSpaceControl()
 	rHQP_P2.EnableEqualityCondition(0.0001);
 	rHQP_P2.SolveQPoases(max_iter);
 	_torque = rHQP_P2._Xopt.segment(0, 15) + Model._bg;
+	cout << rHQP_P2._Xopt.segment(0, 15).transpose() << endl;
 	//cout << _torque.transpose() << endl;
+
 }
 
 void CController::Initialize()
@@ -878,9 +882,9 @@ void CController::Initialize()
 
 	//rHQP
 	rHQP_P1.InitializeProblemSize(27, 12); //variable size = (joint dof)+(task dof), constraint size =(task dof) 
-	_rH1.setZero(rHQP_P1._num_var, HQP_P1._num_var);
+	_rH1.setZero(rHQP_P1._num_var, rHQP_P1._num_var);
 	_rg1.setZero(rHQP_P1._num_var);
-	_rA1.setZero(rHQP_P1._num_cons, HQP_P1._num_var);
+	_rA1.setZero(rHQP_P1._num_cons, rHQP_P1._num_var);
 	_rlbA1.setZero(rHQP_P1._num_cons);
 	_rubA1.setZero(rHQP_P1._num_cons);
 	_rlb1.setZero(rHQP_P1._num_var);
