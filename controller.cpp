@@ -1,4 +1,5 @@
 #include "controller.h"
+#include <chrono>
 
 CController::CController(int JDOF)
 {
@@ -25,8 +26,8 @@ void CController::read(double t, double* q, double* qdot)
 	for (int i = 0; i < _dofj; i++)
 	{
 		_q(i) = q[i];
-		//_qdot(i) = qdot[i]; //from simulator
-		_qdot(i) = CustomMath::VelLowpassFilter(_dt, 2.0*PI* 10.0, _pre_q(i), _q(i), _pre_qdot(i)); //low-pass filter
+		_qdot(i) = qdot[i]; //from simulator
+		//_qdot(i) = CustomMath::VelLowpassFilter(_dt, 2.0*PI* 10.0, _pre_q(i), _q(i), _pre_qdot(i)); //low-pass filter
 		
 		_pre_q(i) = _q(i);
 		_pre_qdot(i) = _qdot(i);
@@ -39,6 +40,7 @@ void CController::write(double* torque)
 	{
 		torque[i] = _torque(i);
 	}
+	torque[0] = 0.0;
 }
 
 void CController::reset_target(double motion_time, VectorXd target_joint_position)
@@ -72,6 +74,7 @@ void CController::motionPlan()
 	_time_plan(1) = 2.0; //move home position
 	_time_plan(2) = 1.0; //wait
 	_time_plan(3) = 2.0; //task space motion
+	_time_plan(4) = 2.0; //task space motion
 
 	if (_bool_plan(_cnt_plan) == 1)
 	{
@@ -86,16 +89,34 @@ void CController::motionPlan()
 		}
 		else if (_cnt_plan == 3)
 		{
-			_pos_goal_left_hand(0) = _x_left_hand(0) + 0.1;
+			_pos_goal_left_hand(0) = _x_left_hand(0) + 0.35;// 0.28;
 			_pos_goal_left_hand(1) = _x_left_hand(1) - 0.0;
 			_pos_goal_left_hand(2) = _x_left_hand(2) - 0.0;
 			_rpy_goal_left_hand(0) = _x_left_hand(3);
 			_rpy_goal_left_hand(1) = _x_left_hand(4);
 			_rpy_goal_left_hand(2) = _x_left_hand(5);// -90.0 * DEG2RAD;
 
-			_pos_goal_right_hand(0) = _x_right_hand(0) + 0.1;
+			_pos_goal_right_hand(0) = _x_right_hand(0) + 0.35;// 0.28;
 			_pos_goal_right_hand(1) = _x_right_hand(1) - 0.0;
 			_pos_goal_right_hand(2) = _x_right_hand(2) - 0.0;
+			_rpy_goal_right_hand(0) = _x_right_hand(3);
+			_rpy_goal_right_hand(1) = _x_right_hand(4);
+			_rpy_goal_right_hand(2) = _x_right_hand(5);// +90.0 * DEG2RAD;
+
+			reset_target(_time_plan(_cnt_plan), _pos_goal_left_hand, _rpy_goal_left_hand, _pos_goal_right_hand, _rpy_goal_right_hand);
+		}
+		else if (_cnt_plan == 4)
+		{
+			_pos_goal_left_hand(0) = _x_left_hand(0) - 0.0;
+			_pos_goal_left_hand(1) = _x_left_hand(1) - 0.0;
+			_pos_goal_left_hand(2) = _x_left_hand(2) + 0.9;
+			_rpy_goal_left_hand(0) = _x_left_hand(3);
+			_rpy_goal_left_hand(1) = _x_left_hand(4);
+			_rpy_goal_left_hand(2) = _x_left_hand(5);// -90.0 * DEG2RAD;
+
+			_pos_goal_right_hand(0) = _x_right_hand(0) - 0.0;
+			_pos_goal_right_hand(1) = _x_right_hand(1) - 0.0;
+			_pos_goal_right_hand(2) = _x_right_hand(2) + 0.9;
 			_rpy_goal_right_hand(0) = _x_right_hand(3);
 			_rpy_goal_right_hand(1) = _x_right_hand(4);
 			_rpy_goal_right_hand(2) = _x_right_hand(5);// +90.0 * DEG2RAD;
@@ -161,19 +182,40 @@ void CController::control_mujoco()
 
 		if (_control_mode == 2)
 		{
+			chrono::system_clock::time_point start = chrono::system_clock::now();
+
 			OperationalSpaceControl();
+
+			chrono::system_clock::time_point end = chrono::system_clock::now();
+			chrono::nanoseconds nano = end - start;
+			//printf("%f \n", nano / 1000.0);//millisec
 		}
 		else if (_control_mode == 3)
 		{
+			chrono::system_clock::time_point start = chrono::system_clock::now();
+
 			HQPTaskSpaceControl();
+
+			chrono::system_clock::time_point end = chrono::system_clock::now();
+			chrono::nanoseconds nano = end - start;
+			//printf("%f \n", nano / 1000.0);//millisec
 		}
 		else if (_control_mode == 4)
 		{
+			chrono::system_clock::time_point start = chrono::system_clock::now();
+
 			ReducedHQPTaskSpaceControl();
+
+			chrono::system_clock::time_point end = chrono::system_clock::now();
+			chrono::nanoseconds nano = end - start;
+			//printf("%f \n", nano/1000.0);//millisec
 		}
 		
 	}
 	
+	safeModeReplaceTorque(_bool_safemode);
+
+	cout << _torque.transpose() << endl;
 }
 
 
@@ -259,35 +301,6 @@ void CController::OperationalSpaceControl()
 	
 	_torque = _J_T_hands * _Lambda_hands * _xddot_star + _Null_hands * (Model._A * (-_kdj * _qdot)) + Model._bg;	
 
-	// set 2
-	// 1st: hands ori, 2nd: hands pos, 3rd: joint dampings
-	//_Lambda_ori_hands = CustomMath::pseudoInverseQR(_J_ori_T_hands) * Model._A * CustomMath::pseudoInverseQR(_J_ori_hands);
-	//_Lambda_pos_hands = CustomMath::pseudoInverseQR(_J_pos_T_hands) * Model._A * CustomMath::pseudoInverseQR(_J_pos_hands);
-
-	//_Null_hands_ori = _Id_15 - _J_ori_T_hands * _Lambda_ori_hands * _J_ori_hands * Model._A.inverse();
-	//_Null_hands_pos = _Id_15 - _J_pos_T_hands * _Lambda_pos_hands * _J_pos_hands * Model._A.inverse();
-
-	//VectorXd xddot_star_hand_ori(6);
-	//VectorXd xddot_star_hand_pos(6);
-	//xddot_star_hand_ori.segment(0, 3) = _kp * _R_err_left_hand + _kd * _Rdot_err_left_hand;//left hand orientation control
-	//xddot_star_hand_ori.segment(3, 3) = _kp * _R_err_right_hand + _kd * _Rdot_err_right_hand;//right hand orientation control
-	//xddot_star_hand_pos.segment(0, 3) = _kp * _x_err_left_hand + _kd * _xdot_err_left_hand;//left hand position control
-	//xddot_star_hand_pos.segment(3, 3) = _kp * _x_err_right_hand + _kd * _xdot_err_right_hand;//right hand position control	
-
-	//cout << xddot_star_hand_ori.transpose() << endl << endl;;
-	//xddot_star_hand_ori.setZero();
-	//cout << _Lambda_ori_hands << endl << endl;
-	//cout <<  _qdot.transpose() << endl;
-	//cout << Model._A << endl;
-	//cout << (Model._A * (-_kdj * _qdot)).transpose() << endl;
-	//cout << (_Null_hands_ori * Model._A * (-_kdj * _qdot)).transpose() << endl << endl;
-	//xddot_star_hand_ori.setZero();
-	//_Null_hands_ori.setIdentity();
-		
-	//_torque = Model._bg +_J_ori_T_hands * _Lambda_ori_hands * xddot_star_hand_ori +_Null_hands_ori * (_J_pos_T_hands * _Lambda_pos_hands * xddot_star_hand_pos + _Null_hands_pos * Model._A * (-_kdj * _qdot));// *(_J_pos_T_hands * _Lambda_pos_hands * xddot_star_hand_pos + _Null_hands_pos * (Model._A * (-_kdj * _qdot)));
-	//cout << _torque.transpose() << endl<<endl;
-	
-	
 }
 
 void CController::HQPTaskSpaceControl()
@@ -461,8 +474,8 @@ void CController::ReducedHQPTaskSpaceControl()
 {
 	_torque.setZero();
 
-	_kp = 100.0;
-	_kd = 20.0;
+	_kp = 100.0; //100
+	_kd = 20.0; //20
 
 	_x_err_left_hand = _x_des_left_hand - Model._x_left_hand;
 	_R_des_left_hand = CustomMath::GetBodyRotationMatrix(_x_des_left_hand(3), _x_des_left_hand(4), _x_des_left_hand(5));
@@ -480,272 +493,339 @@ void CController::ReducedHQPTaskSpaceControl()
 	_xddot_star.segment(3, 3) = _kp * _R_err_left_hand + _kd * _Rdot_err_left_hand; //left hand orientation control
 	_xddot_star.segment(6, 3) = _kp * _x_err_right_hand + _kd * _xdot_err_right_hand; //right hand position control
 	_xddot_star.segment(9, 3) = _kp * _R_err_right_hand + _kd * _Rdot_err_right_hand; //right hand orientation control
+
+	safeWorkSpaceLimit();
+	_xddot_star.segment(0, 3) = _kp * _x_err_left_hand + _kd * _xdot_err_left_hand + _acc_workspace_avoid_left;
+	_xddot_star.segment(6, 3) = _kp * _x_err_right_hand + _kd * _xdot_err_right_hand + _acc_workspace_avoid_left;
 		
-
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	// Solve rHQP   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	double threshold = 0.0001;
-	int max_iter = 1000;
-	//first priority task QP ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
-	//set cost function x^T*H*x + g	
-	_rH1.setZero();
-	for (int i = 0; i < 15; i++)
+	if (_bool_safemode == false)
 	{
-		_rH1(i, i) = 0.00001;
-	}
-	for (int i = 15; i < 27; i++)
-	{
-		_rH1(i, i) = 1.0;
-	}	
-	_rg1.setZero();
-	rHQP_P1.UpdateMinProblem(_rH1, _rg1);
-
-	MatrixXd J_Ainv(12, 15);
-	J_Ainv = _J_hands * Model._A.inverse();
-
-	//set A*x <= b	
-	_rA1.setZero();
-	_rlbA1.setZero();
-	_rubA1.setZero();
-	_rA1.block<12, 15>(0, 0) = J_Ainv;
-	_rA1.block<12, 12>(0, 15) = -_Id_12;
-
-	for (int i = 0; i < 12; i++)
-	{
-		_rlbA1(i) = - _Jdot_qdot(i) + _xddot_star(i) - threshold;
-		_rubA1(i) = - _Jdot_qdot(i) + _xddot_star(i) + threshold;
-	}
-	rHQP_P1.UpdateSubjectToAx(_rA1, _rlbA1, _rubA1);
-
-	//set lb <= x <= ub	
-	_rlb1.setZero();
-	_rub1.setZero();
-	//joint torque limit
-	for (int i = 0; i < 15; i++)
-	{
-		//torque limit
-		_rlb1(i) = Model._min_joint_torque(i) - Model._bg(i);
-		_rub1(i) = Model._max_joint_torque(i) - Model._bg(i);
-
-		//joint velocity limit
-		//double k_tanh = 1.0;
-		/*
-		if (abs(Model._min_joint_velocity(i) - _qdot(i)) <= abs(Model._max_joint_velocity(i) - _qdot(i)))
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		// Solve rHQP   /////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		double threshold = 0.001;
+		int max_iter = 1000;
+		//first priority task QP ////////////////////////////////////////////////////////////////////////////////////////////////////////////////
+		//set cost function x^T*H*x + g	
+		_rH1.setZero();
+		for (int i = 0; i < 15; i++) //torque
 		{
-			if (_qdot(i) > Model._min_joint_velocity(i))
-			{
-				_rlb1(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_qdot(i) - Model._min_joint_velocity(i))) + Model._max_joint_torque(i);
-			}
-			else
-			{
-				_rlb1(i) = Model._max_joint_torque(i) - 0.05;
-			}
-			_rub1(i) = Model._max_joint_torque(i);
+			_rH1(i, i) = 1.0;
 		}
-		else
+		for (int i = 15; i < 27; i++) //slack
 		{
-			if (_qdot(i) < Model._max_joint_velocity(i))
-			{
-				_rub1(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_qdot(i) - Model._max_joint_velocity(i))) + Model._min_joint_torque(i);
-			}
-			else
-			{
-				_rub1(i) = Model._min_joint_torque(i) + 0.05;
-			}
-			_rlb1(i) = Model._min_joint_torque(i);
-		}*/
-
-		//joint position limit
-/*		k_tanh = 5.0;
-		double tau_lb_tmp = 0.0;
-		double tau_ub_tmp = 0.0;
-		if (abs(Model._min_joint_position(i) - _q(i)) <= abs(Model._max_joint_position(i) - _q(i)))
-		{
-			if (_q(i) > Model._min_joint_position(i))
-			{
-				tau_lb_tmp = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_q(i) - Model._min_joint_position(i))) + Model._max_joint_torque(i);
-			}
-			else
-			{
-				tau_lb_tmp = Model._max_joint_torque(i) - 0.05;				
-			}
-			tau_ub_tmp = Model._max_joint_torque(i);
+			_rH1(i, i) = 1000000.0;
 		}
-		else
+		//_rH1.block<15, 15>(0, 0) = Model._A.inverse();
+		_rg1.setZero();
+		rHQP_P1.UpdateMinProblem(_rH1, _rg1);
+
+		MatrixXd J_Ainv(12, 15);
+		J_Ainv = _J_hands * Model._A.inverse();
+
+		//set A*x <= b
+		_rA1.setZero();
+		_rlbA1.setZero();
+		_rubA1.setZero();
+		_rA1.block<12, 15>(0, 0) = J_Ainv;
+		_rA1.block<12, 12>(0, 15) = -_Id_12;
+
+		for (int i = 0; i < 12; i++)
 		{
-			if (_q(i) < Model._max_joint_position(i))
+			_rlbA1(i) = -_Jdot_qdot(i) + _xddot_star(i) - threshold;
+			_rubA1(i) = -_Jdot_qdot(i) + _xddot_star(i) + threshold;
+		}
+		rHQP_P1.UpdateSubjectToAx(_rA1, _rlbA1, _rubA1);
+
+		//set lb <= x <= ub	
+		_rlb1.setZero();
+		_rub1.setZero();
+		//joint torque limit
+		for (int i = 0; i < 15; i++)
+		{
+			//torque limit
+			//_rlb1(i) = Model._min_joint_torque(i) - Model._bg(i);
+			//_rub1(i) = Model._max_joint_torque(i) - Model._bg(i);
+			_rlb1(i) = Model._min_ctrl_joint_torque(i);
+			_rub1(i) = Model._max_ctrl_joint_torque(i);
+
+			//joint velocity limit
+			//double k_tanh = 1.0;
+			/*
+			if (abs(Model._min_joint_velocity(i) - _qdot(i)) <= abs(Model._max_joint_velocity(i) - _qdot(i)))
 			{
-				tau_ub_tmp = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_q(i) - Model._max_joint_position(i))) + Model._min_joint_torque(i);
+				if (_qdot(i) > Model._min_joint_velocity(i))
+				{
+					_rlb1(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_qdot(i) - Model._min_joint_velocity(i))) + Model._max_joint_torque(i);
+				}
+				else
+				{
+					_rlb1(i) = Model._max_joint_torque(i) - 0.05;
+				}
+				_rub1(i) = Model._max_joint_torque(i);
 			}
 			else
 			{
-				tau_ub_tmp = Model._min_joint_torque(i) + 0.05;
-			}
-			tau_lb_tmp = Model._min_joint_torque(i);
-		}
+				if (_qdot(i) < Model._max_joint_velocity(i))
+				{
+					_rub1(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_qdot(i) - Model._max_joint_velocity(i))) + Model._min_joint_torque(i);
+				}
+				else
+				{
+					_rub1(i) = Model._min_joint_torque(i) + 0.05;
+				}
+				_rlb1(i) = Model._min_joint_torque(i);
+			}*/
 
-		_rlb1(i) = tau_lb_tmp;
-		_rub1(i) = tau_ub_tmp;
-		if (tau_lb_tmp > _rlb2(i))
+			//joint position limit
+	/*		k_tanh = 5.0;
+			double tau_lb_tmp = 0.0;
+			double tau_ub_tmp = 0.0;
+			if (abs(Model._min_joint_position(i) - _q(i)) <= abs(Model._max_joint_position(i) - _q(i)))
+			{
+				if (_q(i) > Model._min_joint_position(i))
+				{
+					tau_lb_tmp = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_q(i) - Model._min_joint_position(i))) + Model._max_joint_torque(i);
+				}
+				else
+				{
+					tau_lb_tmp = Model._max_joint_torque(i) - 0.05;
+				}
+				tau_ub_tmp = Model._max_joint_torque(i);
+			}
+			else
+			{
+				if (_q(i) < Model._max_joint_position(i))
+				{
+					tau_ub_tmp = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_q(i) - Model._max_joint_position(i))) + Model._min_joint_torque(i);
+				}
+				else
+				{
+					tau_ub_tmp = Model._min_joint_torque(i) + 0.05;
+				}
+				tau_lb_tmp = Model._min_joint_torque(i);
+			}
+
+			_rlb1(i) = tau_lb_tmp;
+			_rub1(i) = tau_ub_tmp;
+			if (tau_lb_tmp > _rlb2(i))
+			{
+				_rlb2(i) = tau_lb_tmp;
+			}
+			if (tau_ub_tmp < _rub2(i))
+			{
+				_rub2(i) = tau_ub_tmp;
+			}*/
+		}
+		_rlb1(0) = 0.0 - threshold;
+		_rub1(0) = 0.0 + threshold;
+		//task limit	
+		for (int i = 0; i < 12; i++)
 		{
+			_rlb1(i + 15) = -1000000.0;
+			_rub1(i + 15) = 1000000.0;
+		}
+		rHQP_P1.UpdateSubjectToX(_rlb1, _rub1);
+
+		//Solve
+		rHQP_P1.EnableEqualityCondition(0.0001);
+		rHQP_P1.SolveQPoases(max_iter);
+		//_torque = rHQP_P1._Xopt.segment(0, 15) + Model._bg;
+
+		//second priority task QP ////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
+		//set cost function x^T*H*x + g	
+		_rH2.setZero();
+		for (int i = 0; i < 15; i++) //torque
+		{
+			_rH2(i, i) = 1.0;
+		}
+		for (int i = 15; i < 30; i++) //slack
+		{
+			_rH2(i, i) = 1000000.0;
+		}
+		_rH2(15, 15) = 0.0001;
+		//_rH2.block<15, 15>(0, 0) = Model._A.inverse();
+		//_rH2.block<15, 15>(15, 15) = Model._A;
+		_rg2.setZero();
+		rHQP_P2.UpdateMinProblem(_rH2, _rg2);
+
+		//set A*x <= b	
+		_rA2.setZero();
+		_rlbA2.setZero();
+		_rubA2.setZero();
+		_rA2.block<15, 15>(0, 0) = Model._A.inverse();
+		_rA2.block<15, 15>(0, 15) = -_Id_15;
+		_rA2.block<12, 15>(15, 0) = J_Ainv;
+
+		VectorXd joint_acc_des(15);
+		joint_acc_des.setZero();
+		_kdj = 20.0;
+		joint_acc_des = -_kdj * _qdot;
+		joint_acc_des(0) = 0.0;
+		//joint_acc_des(0) = 400.0 * (_q_home(0)- _q(0)) - _kdj * _qdot(0);
+
+		for (int i = 0; i < 15; i++)
+		{
+			_rlbA2(i) = joint_acc_des(i) - threshold;
+			_rubA2(i) = joint_acc_des(i) + threshold;
+		}
+		for (int i = 0; i < 12; i++)
+		{
+		_rlbA2(i + 15) = -_Jdot_qdot(i) + _xddot_star(i) + rHQP_P1._Xopt(i + 15) - threshold;
+		_rubA2(i + 15) = -_Jdot_qdot(i) + _xddot_star(i) + rHQP_P1._Xopt(i + 15) + threshold;
+		}
+		rHQP_P2.UpdateSubjectToAx(_rA2, _rlbA2, _rubA2);
+
+		//set lb <= x <= ub
+		_rlb2.setZero();
+		_rub2.setZero();
+
+		//joint torque limit
+		for (int i = 0; i < 15; i++)
+		{
+			//_rlb2(i) = Model._min_joint_torque(i) - Model._bg(i);
+			//_rub2(i) = Model._max_joint_torque(i) - Model._bg(i);
+			_rlb2(i) = Model._min_ctrl_joint_torque(i) * 2.0;
+			_rub2(i) = Model._max_ctrl_joint_torque(i) * 2.0;
+
+			//double k_tanh = 1.0;
+			/*
+			//joint velocity limit
+			if (abs(Model._min_joint_velocity(i) - _qdot(i)) <= abs(Model._max_joint_velocity(i) - _qdot(i)))
+			{
+				if (_qdot(i) > Model._min_joint_velocity(i))
+				{
+					_rlb2(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_qdot(i) - Model._min_joint_velocity(i))) + Model._max_joint_torque(i);
+				}
+				else
+				{
+					_rlb2(i) = Model._max_joint_torque(i) - 0.05;
+				}
+				_rub2(i) = Model._max_joint_torque(i);
+			}
+			else
+			{
+				if (_qdot(i) < Model._max_joint_velocity(i))
+				{
+					_rub2(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_qdot(i) - Model._max_joint_velocity(i))) + Model._min_joint_torque(i);
+				}
+				else
+				{
+					_rub2(i) = Model._min_joint_torque(i) + 0.05;
+				}
+				_rlb2(i) = Model._min_joint_torque(i);
+			}*/
+
+			//joint position limit
+	/*		k_tanh = 5.0;
+			double tau_lb_tmp = 0.0;
+			double tau_ub_tmp = 0.0;
+			if(abs(Model._min_joint_position(i) - _q(i)) <= abs(Model._max_joint_position(i) - _q(i)))
+			{
+			  if(_q(i) > Model._min_joint_position(i))
+			  {
+				  tau_lb_tmp = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_q(i) - Model._min_joint_position(i))) + Model._max_joint_torque(i);
+			  }
+			  else
+			  {
+				  tau_lb_tmp = Model._max_joint_torque(i) - 0.05;
+			  }
+			  tau_ub_tmp = Model._max_joint_torque(i);
+			}
+			else
+			{
+			  if(_q(i) < Model._max_joint_position(i))
+			  {
+				  tau_ub_tmp = -(Model._max_joint_torque(i)- Model._min_joint_torque(i)) *tanh(k_tanh*(_q(i)- Model._max_joint_position(i))) + Model._min_joint_torque(i);
+			  }
+			  else
+			  {
+				  tau_ub_tmp = Model._min_joint_torque(i) + 0.05;
+			  }
+			  tau_lb_tmp = Model._min_joint_torque(i);
+			}
 			_rlb2(i) = tau_lb_tmp;
-		}
-		if (tau_ub_tmp < _rub2(i))
-		{
 			_rub2(i) = tau_ub_tmp;
-		}*/
+			if (tau_lb_tmp > _rlb2(i))
+			{
+				_rlb2(i) = tau_lb_tmp;
+			}
+			if (tau_ub_tmp < _rub2(i))
+			{
+				_rub2(i) = tau_ub_tmp;
+			}*/
+		}
+		_rlb2(0) = 0.0 - threshold;
+		_rub2(0) = 0.0 + threshold;
+		//task limit
+		for (int i = 0; i < 15; i++)
+		{
+			_rlb2(i + 15) = -1000000.0;
+			_rub2(i + 15) = 1000000.0;
+		}
+		rHQP_P2.UpdateSubjectToX(_rlb2, _rub2);
+
+		//Solve
+		//rHQP_P2.EnableEqualityCondition(0.0001);
+		rHQP_P2.SolveQPoases(max_iter);
+
+		if (rHQP_P1._num_state == 0 || rHQP_P2._num_state == 0)
+		{
+			_torque = rHQP_P2._Xopt.segment(0, 15) + Model._bg;
+		}
+		else //when solving HQP failed
+		{
+			_bool_safemode = true;
+
+			cout << "Fault: Cannot solve QP!!" << endl << endl;
+		}
 	}
-	_rlb2(0) = 0.0 - threshold;
-	_rub2(0) = 0.0 + threshold;
-	//task limit	
-	for (int i = 0; i < 12; i++)
+
+}
+
+void CController::safeModeReplaceTorque(bool bool_safemode)
+{
+	if (bool_safemode == true)
 	{
-		_rlb1(i + 15) = -1000.0;
-		_rub1(i + 15) = 1000.0;
+		_torque.setZero();
+		_torque = Model._A *0.5* _kdj * ( - _qdot) + Model._bg;
 	}
-	rHQP_P1.UpdateSubjectToX(_rlb1, _rub1);
+}
 
-	//Solve
-	rHQP_P1.EnableEqualityCondition(0.0001);
-	rHQP_P1.SolveQPoases(max_iter);
-	//_torque = rHQP_P1._Xopt.segment(0, 15);
+void CController::safeWorkSpaceLimit()
+{
+	_dist_shoulder_hand_left = sqrt((Model._x_left_shoulder(0) - Model._x_left_hand(0)) * (Model._x_left_shoulder(0) - Model._x_left_hand(0)) + (Model._x_left_shoulder(1) - Model._x_left_hand(1)) * (Model._x_left_shoulder(1) - Model._x_left_hand(1)) + (Model._x_left_shoulder(2) - Model._x_left_hand(2)) * (Model._x_left_shoulder(2) - Model._x_left_hand(2)));
+	_dist_shoulder_hand_right = sqrt((Model._x_right_shoulder(0) - Model._x_right_hand(0)) * (Model._x_right_shoulder(0) - Model._x_right_hand(0)) + (Model._x_right_shoulder(1) - Model._x_right_hand(1)) * (Model._x_right_shoulder(1) - Model._x_right_hand(1)) + (Model._x_right_shoulder(2) - Model._x_right_hand(2)) * (Model._x_right_shoulder(2) - Model._x_right_hand(2)));
 
-	//second priority task QP ////////////////////////////////////////////////////////////////////////////////////////////////////////////////	
-	//set cost function x^T*H*x + g	
-	_rH2.setZero();
-	for (int i = 0; i < 15; i++)
+	//cout << _dist_shoulder_hand_left << "  " << _dist_shoulder_hand_right << endl;
+
+	_dir_hand_to_shoulder_left = (Model._x_left_hand - Model._x_left_shoulder)/ _dist_shoulder_hand_left;
+	_dir_hand_to_shoulder_right = (Model._x_right_hand - Model._x_right_shoulder) / _dist_shoulder_hand_right;
+
+	_workspace_avoid_gain = 100.0;	
+	double dist_boundary = 0.6;
+	double dist_margin = 0.03;
+	double alpha = 0.0;
+	alpha = CustomMath::SwitchFunction(dist_boundary, dist_boundary + dist_margin, _dist_shoulder_hand_left);
+
+	if (_dist_shoulder_hand_left >= dist_boundary)
 	{
-		_rH2(i, i) = 0.00001;
+		_acc_workspace_avoid_left = alpha* _workspace_avoid_gain* _dir_hand_to_shoulder_left*(dist_boundary - _dist_shoulder_hand_left) - alpha* _xddot_star.segment(0, 3);//
 	}
-	for (int i = 15; i < 30; i++)
+	else
 	{
-		_rH2(i, i) = 1.0;
+		_acc_workspace_avoid_left.setZero();
 	}
-	_rH2.block<15, 15>(15, 15) = Model._A;
-	_rg2.setZero();
-	rHQP_P2.UpdateMinProblem(_rH2, _rg2);
 
-	//set A*x <= b	
-	_rA2.setZero();
-	_rlbA2.setZero();
-	_rubA2.setZero();
-	_rA2.block<15, 15>(0, 0) = Model._A.inverse();
-	_rA2.block<15, 15>(0, 15) = -_Id_15;
-	_rA2.block<12, 15>(15, 0) = J_Ainv;	
-
-	VectorXd joint_acc_des(15);
-	joint_acc_des.setZero();
-	_kdj = 40.0;
-	joint_acc_des = -_kdj * _qdot;
-	//joint_acc_des(0) = 400.0 * (_q_home(0)- _q(0)) - _kdj * _qdot(0);
-
-	for (int i = 0; i < 15; i++)
+	if (_dist_shoulder_hand_right >= dist_boundary)
 	{
-		_rlbA2(i) = joint_acc_des(i) - threshold;
-		_rubA2(i) = joint_acc_des(i) + threshold;
+		_acc_workspace_avoid_right = alpha * _workspace_avoid_gain * _dir_hand_to_shoulder_right * (dist_boundary - _dist_shoulder_hand_right) - alpha * _xddot_star.segment(6, 3);//
 	}
-	for (int i = 0; i < 12; i++)
+	else
 	{
-		_rlbA2(i + 15) = _Jdot_qdot(i) + _xddot_star(i) + rHQP_P1._Xopt(i + 15) - threshold;
-		_rubA2(i + 15) = _Jdot_qdot(i) + _xddot_star(i) + rHQP_P1._Xopt(i + 15) + threshold;
+		_acc_workspace_avoid_right.setZero();
 	}
-	rHQP_P2.UpdateSubjectToAx(_rA2, _rlbA2, _rubA2);
-
-	//set lb <= x <= ub
-	_rlb2.setZero();
-	_rub2.setZero();
 	
-	//joint torque limit
-	for (int i = 0; i < 15; i++)
-	{
-		_rlb2(i) = Model._min_joint_torque(i) - Model._bg(i);
-		_rub2(i) = Model._max_joint_torque(i) - Model._bg(i);
-		
-		//double k_tanh = 1.0;
-		/*
-		//joint velocity limit		
-		if (abs(Model._min_joint_velocity(i) - _qdot(i)) <= abs(Model._max_joint_velocity(i) - _qdot(i)))
-		{
-			if (_qdot(i) > Model._min_joint_velocity(i))
-			{
-				_rlb2(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_qdot(i) - Model._min_joint_velocity(i))) + Model._max_joint_torque(i);
-			}
-			else
-			{
-				_rlb2(i) = Model._max_joint_torque(i) - 0.05;
-			}
-			_rub2(i) = Model._max_joint_torque(i);
-		}
-		else
-		{
-			if (_qdot(i) < Model._max_joint_velocity(i))
-			{
-				_rub2(i) = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_qdot(i) - Model._max_joint_velocity(i))) + Model._min_joint_torque(i);
-			}
-			else
-			{
-				_rub2(i) = Model._min_joint_torque(i) + 0.05;				
-			}
-			_rlb2(i) = Model._min_joint_torque(i);
-		}*/
-		
-		//joint position limit
-/*		k_tanh = 5.0;
-		double tau_lb_tmp = 0.0;
-		double tau_ub_tmp = 0.0;
-		if(abs(Model._min_joint_position(i) - _q(i)) <= abs(Model._max_joint_position(i) - _q(i)))
-		{
-		  if(_q(i) > Model._min_joint_position(i))
-		  {
-			  tau_lb_tmp = -(Model._max_joint_torque(i) - Model._min_joint_torque(i)) * tanh(k_tanh * (_q(i) - Model._min_joint_position(i))) + Model._max_joint_torque(i);
-		  }
-		  else
-		  {
-			  tau_lb_tmp = Model._max_joint_torque(i) - 0.05;
-		  }		  
-		  tau_ub_tmp = Model._max_joint_torque(i);
-		}
-		else
-		{
-		  if(_q(i) < Model._max_joint_position(i))
-		  {
-			  tau_ub_tmp = -(Model._max_joint_torque(i)- Model._min_joint_torque(i)) *tanh(k_tanh*(_q(i)- Model._max_joint_position(i))) + Model._min_joint_torque(i);
-		  }
-		  else
-		  {
-			  tau_ub_tmp = Model._min_joint_torque(i) + 0.05;
-		  }
-		  tau_lb_tmp = Model._min_joint_torque(i);
-		}
-		_rlb2(i) = tau_lb_tmp;
-		_rub2(i) = tau_ub_tmp;
-		if (tau_lb_tmp > _rlb2(i))
-		{
-			_rlb2(i) = tau_lb_tmp;
-		}
-		if (tau_ub_tmp < _rub2(i))
-		{
-			_rub2(i) = tau_ub_tmp;
-		}*/
-	}
-	_rlb2(0) = 0.0 - threshold;
-	_rub2(0) = 0.0 + threshold;
-	//task limit
-	for (int i = 0; i < 15; i++)
-	{
-		_rlb2(i + 15) = -1000.0;
-		_rub2(i + 15) = 1000.0;
-	}
-	rHQP_P2.UpdateSubjectToX(_rlb2, _rub2);
-
-	//Solve
-	rHQP_P2.EnableEqualityCondition(0.0001);
-	rHQP_P2.SolveQPoases(max_iter);
-	_torque = rHQP_P2._Xopt.segment(0, 15) + Model._bg;
-	cout << rHQP_P2._Xopt.segment(0, 15).transpose() << endl;
-	//cout << _torque.transpose() << endl;
-
 }
 
 void CController::Initialize()
@@ -897,5 +977,15 @@ void CController::Initialize()
 	_rubA2.setZero(rHQP_P2._num_cons);
 	_rlb2.setZero(rHQP_P2._num_var);
 	_rub2.setZero(rHQP_P2._num_var);
+
+
+	_bool_safemode = false;
+	_dist_shoulder_hand_left = 0.0;
+	_dist_shoulder_hand_right = 0.0;
+	_workspace_avoid_gain = 0.0;
+	_dir_hand_to_shoulder_left.setZero();
+	_dir_hand_to_shoulder_right.setZero();
+	_acc_workspace_avoid_left.setZero();
+	_acc_workspace_avoid_right.setZero();
 
 }

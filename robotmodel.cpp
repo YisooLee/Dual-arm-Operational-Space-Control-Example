@@ -25,13 +25,17 @@ void CModel::Initialize()
 
 	_id_left_hand = 8;
 	_id_right_hand = 15;
+	_id_left_shoulder = 2;
+	_id_right_shoulder = 9;
 
 	_max_joint_torque.setZero(_k);
 	_min_joint_torque.setZero(_k);
 	_max_joint_velocity.setZero(_k);
 	_min_joint_velocity.setZero(_k);
 	_max_joint_position.setZero(_k);
-	_min_joint_position.setZero(_k);	
+	_min_joint_position.setZero(_k);
+	_max_ctrl_joint_torque.setZero(_k);
+	_min_ctrl_joint_torque.setZero(_k);
 
 	_A.setZero(_k,_k);
 	_g.setZero(_k);
@@ -52,7 +56,11 @@ void CModel::Initialize()
 	_xdot_left_hand.setZero(6);
 	_xdot_right_hand.setZero(6);
 
-	_global_rotate.setZero(3, 3);
+	_x_left_shoulder.setZero();
+	_x_right_shoulder.setZero();
+	_position_local_zerovec.setZero();
+
+	_global_rotate.setZero(3, 3);	
 
 	set_robot_config();
 	load_model();
@@ -116,7 +124,7 @@ void CModel::update_dynamics()
 void CModel::calculate_EE_Jacobians()
 {
 	if (_bool_kinematics_update == true)
-	{	
+	{
 		_J_left_hand.setZero();
 		_J_tmp.setZero();		
 		RigidBodyDynamics::CalcPointJacobian6D(_model, _q, _id_left_hand, _position_local_task_left_hand, _J_tmp, false); //left hand
@@ -153,6 +161,12 @@ void CModel::calculate_EE_positions_orientations()
 
 		_R_left_hand = _global_rotate*(RigidBodyDynamics::CalcBodyWorldOrientation(_model, _q, _id_left_hand, false).transpose());
 		_R_right_hand = _global_rotate*(RigidBodyDynamics::CalcBodyWorldOrientation(_model, _q, _id_right_hand, false).transpose());
+
+
+		_x_left_shoulder.setZero();
+		_x_left_shoulder = _global_rotate * RigidBodyDynamics::CalcBodyToBaseCoordinates(_model, _q, _id_left_shoulder, _position_local_zerovec, false);
+		_x_right_shoulder.setZero();
+		_x_right_shoulder = _global_rotate * RigidBodyDynamics::CalcBodyToBaseCoordinates(_model, _q, _id_right_shoulder, _position_local_zerovec, false);
 	}
 	else
 	{
@@ -174,7 +188,6 @@ void CModel::calculate_EE_velocity()
 }
 void CModel::set_robot_config()
 {
-
 	_position_local_task_left_hand.setZero();
 	_position_local_task_left_hand(0) = -0.017;
 	_position_local_task_left_hand(1) = -0.08;
@@ -246,4 +259,14 @@ void CModel::set_robot_config()
 	_min_joint_position(13) = -90.0 * DEG2RAD;
 	_max_joint_position(14) = 45.0 * DEG2RAD;
 	_min_joint_position(14) = -45.0 * DEG2RAD;
+
+	_max_ctrl_joint_torque.setConstant(15.0);
+	_max_ctrl_joint_torque(0) = 0.0;
+	_max_ctrl_joint_torque(5) = 10.0;
+	_max_ctrl_joint_torque(6) = 10.0;
+	_max_ctrl_joint_torque(7) = 10.0;
+	_max_ctrl_joint_torque(12) = 10.0;
+	_max_ctrl_joint_torque(13) = 10.0;
+	_max_ctrl_joint_torque(14) = 10.0;
+	_min_ctrl_joint_torque = -_max_ctrl_joint_torque;	
 }

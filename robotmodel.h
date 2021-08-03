@@ -34,9 +34,9 @@ public:
 	Vector3d _x_left_hand, _x_right_hand;
 	Matrix3d _R_left_hand, _R_right_hand;
 	VectorXd _xdot_left_hand, _xdot_right_hand;
+	Vector3d _x_left_shoulder, _x_right_shoulder;
 
-	VectorXd _max_joint_torque, _min_joint_torque, _max_joint_velocity, _min_joint_velocity, _max_joint_position, _min_joint_position;
-
+	VectorXd _max_joint_torque, _min_joint_torque, _max_joint_velocity, _min_joint_velocity, _max_joint_position, _min_joint_position, _max_ctrl_joint_torque, _min_ctrl_joint_torque;
 
 	int _k;//joint number
 
@@ -47,13 +47,14 @@ private:
 
 	bool _bool_model_update, _bool_kinematics_update, _bool_dynamics_update, _bool_Jacobian_update;
 
-	int _id_left_hand, _id_right_hand;
+	int _id_left_hand, _id_right_hand, _id_left_shoulder, _id_right_shoulder;
 
 	VectorXd _q, _qdot;
 	VectorXd _zero_vec_joint;
 
 	Vector3d _position_local_task_left_hand;
 	Vector3d _position_local_task_right_hand;
+	Vector3d _position_local_zerovec;
 
 	MatrixXd _J_tmp;	
 	Matrix3d _global_rotate;	

@@ -153,6 +153,20 @@ private:
 	Vector3d _pos_goal_right_hand;
 	Vector3d _rpy_goal_right_hand;
 
+	// addons  ////////////////////////////////////////////////////////////////////////////////////////	
+	bool _bool_safemode;
+	void safeModeReplaceTorque(bool bool_safemode);
+	void safeWorkSpaceLimit();
+	double _dist_shoulder_hand_left;
+	double _dist_shoulder_hand_right;
+	double _workspace_avoid_gain;
+	Vector3d _dir_hand_to_shoulder_left;
+	Vector3d _dir_hand_to_shoulder_right;
+	Vector3d _acc_workspace_avoid_left;
+	Vector3d _acc_workspace_avoid_right;
+
+
+	////////////////////////////////////////////////////////////////////////////////////////////////////
 	
 };
 
