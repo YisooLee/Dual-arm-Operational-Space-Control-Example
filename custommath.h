@@ -10,7 +10,6 @@
 #include <Eigen/Dense>
 using namespace Eigen;
 
-
 namespace CustomMath
 {
 
@@ -506,7 +505,121 @@ namespace CustomMath
         alpha = Cubic(val, start, end, 0.0, 0.0, 1.0, 0.0);
         return alpha;
     }
+
+    static void ContactWrenchConeConstraintGenerate(double friction_coeff, double cop_x_b, double cop_y_b, double pushing_force_threshold, Eigen::MatrixXd& A, Eigen::VectorXd& lb, Eigen::VectorXd& ub) //A: constraint matrix
+    {
+        //This function is for contact wrench cone constraint
+        //based on Caron, Stéphane, Quang-Cuong Pham, and Yoshihiko Nakamura. "Stability of surface contacts for humanoid robots: Closed-form formulae of the contact wrench cone for rectangular support areas." 2015 IEEE International Conference on Robotics and Automation (ICRA). IEEE, 2015.
+        // * z direction denotes normal direction of contact plane (negative direction = toward object or ground)
+        // * pushing_force_thrreshold should be negative number 
+        // * coordinate has to locate center of the contact plane (cop_x_b = l_x/2, cop_y_b = l_y/2)
+        // * friction_coeff, cop_x_b and cop_y_b should be positive number
+        
+        A.setZero(17, 6);
+        lb.setZero(17);
+        ub.setZero(17);
+
+        double inf_val = 100000000.0; //large number to describe infinite
+
+        // A matrix
+        //CoP x
+        A(0, 2) = -cop_x_b;
+        A(0, 4) = -1.0;
+        A(1, 2) = cop_x_b;
+        A(1, 4) = -1.0;
+        //CoP y
+        A(2, 2) = -cop_y_b;
+        A(2, 3) = 1.0;
+        A(3, 2) = cop_y_b;
+        A(3, 3) = 1.0;
+        //Fx friction
+        A(4, 0) = 1.0;
+        A(4, 2) = -friction_coeff;
+        A(5, 0) = 1.0;
+        A(5, 2) = friction_coeff;
+        //Fy friction
+        A(6, 1) = 1.0;
+        A(6, 2) = -friction_coeff;
+        A(7, 1) = 1.0;
+        A(7, 2) = friction_coeff;
+        //Mz friction
+        A(8, 0) = -cop_y_b;
+        A(8, 1) = -cop_x_b;
+        A(8, 2) = -friction_coeff*(cop_x_b+cop_y_b)/2.0;
+        A(8, 3) = friction_coeff;
+        A(8, 4) = friction_coeff;
+        A(8, 5) = 1.0;
+        A(9, 0) = -cop_y_b;
+        A(9, 1) = cop_x_b;
+        A(9, 2) = -friction_coeff * (cop_x_b + cop_y_b) / 2.0;
+        A(9, 3) = friction_coeff;
+        A(9, 4) = -friction_coeff;
+        A(9, 5) = 1.0;
+        A(10, 0) = cop_y_b;
+        A(10, 1) = -cop_x_b;
+        A(10, 2) = -friction_coeff * (cop_x_b + cop_y_b) / 2.0;
+        A(10, 3) = -friction_coeff;
+        A(10, 4) = friction_coeff;
+        A(10, 5) = 1.0;
+        A(11, 0) = cop_y_b;
+        A(11, 1) = cop_x_b;
+        A(11, 2) = -friction_coeff * (cop_x_b + cop_y_b) / 2.0;
+        A(11, 3) = -friction_coeff;
+        A(11, 4) = -friction_coeff;
+        A(11, 5) = 1.0;
+        A(12, 0) = -cop_y_b;
+        A(12, 1) = -cop_x_b;
+        A(12, 2) = -friction_coeff * (cop_x_b + cop_y_b) / 2.0;
+        A(12, 3) = -friction_coeff;
+        A(12, 4) = -friction_coeff;
+        A(12, 5) = -1.0;
+        A(13, 0) = -cop_y_b;
+        A(13, 1) = cop_x_b;
+        A(13, 2) = -friction_coeff * (cop_x_b + cop_y_b) / 2.0;
+        A(13, 3) = -friction_coeff;
+        A(13, 4) = friction_coeff;
+        A(13, 5) = -1.0;
+        A(14, 0) = cop_y_b;
+        A(14, 1) = -cop_x_b;
+        A(14, 2) = -friction_coeff * (cop_x_b + cop_y_b) / 2.0;
+        A(14, 3) = friction_coeff;
+        A(14, 4) = -friction_coeff;
+        A(14, 5) = -1.0;
+        A(15, 0) = cop_y_b;
+        A(15, 1) = cop_x_b;
+        A(15, 2) = -friction_coeff * (cop_x_b + cop_y_b) / 2.0;
+        A(15, 3) = friction_coeff;
+        A(15, 4) = friction_coeff;
+        A(15, 5) = -1.0;
+        //Fz (pushing force)
+        A(16, 2) = 1.0;
+        
+        // lb vector        
+        lb(1) = -inf_val;
+        lb(3) = -inf_val;
+        lb(5) = -inf_val;
+        lb(7) = -inf_val;
+        lb(16) = -inf_val;
+        
+        //ub vector
+        ub(0) = inf_val;
+        ub(2) = inf_val;
+        ub(4) = inf_val;
+        ub(6) = inf_val;
+        ub(8) = inf_val;
+        ub(9) = inf_val;
+        ub(10) = inf_val;
+        ub(11) = inf_val;
+        ub(12) = inf_val;
+        ub(13) = inf_val;
+        ub(14) = inf_val;
+        ub(15) = inf_val;
+        ub(16) = pushing_force_threshold;
+    }
 }
+
+
+
 
 
 #endif

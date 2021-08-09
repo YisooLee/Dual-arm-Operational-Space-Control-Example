@@ -56,7 +56,7 @@ void CController::reset_target(double motion_time, VectorXd target_joint_positio
 
 void CController::reset_target(double motion_time, Vector3d target_pos_lh, Vector3d target_ori_lh, Vector3d target_pos_rh, Vector3d target_ori_rh)
 {
-	_control_mode = 4;
+	_control_mode = 2;
 	_motion_time = motion_time;
 	_bool_joint_motion = false;
 	_bool_ee_motion = false;
@@ -89,14 +89,14 @@ void CController::motionPlan()
 		}
 		else if (_cnt_plan == 3)
 		{
-			_pos_goal_left_hand(0) = _x_left_hand(0) + 0.35;// 0.28;
+			_pos_goal_left_hand(0) = _x_left_hand(0) + 0.1;// 0.25;
 			_pos_goal_left_hand(1) = _x_left_hand(1) - 0.0;
 			_pos_goal_left_hand(2) = _x_left_hand(2) - 0.0;
 			_rpy_goal_left_hand(0) = _x_left_hand(3);
 			_rpy_goal_left_hand(1) = _x_left_hand(4);
 			_rpy_goal_left_hand(2) = _x_left_hand(5);// -90.0 * DEG2RAD;
 
-			_pos_goal_right_hand(0) = _x_right_hand(0) + 0.35;// 0.28;
+			_pos_goal_right_hand(0) = _x_right_hand(0) + 0.1;// 0.25;
 			_pos_goal_right_hand(1) = _x_right_hand(1) - 0.0;
 			_pos_goal_right_hand(2) = _x_right_hand(2) - 0.0;
 			_rpy_goal_right_hand(0) = _x_right_hand(3);
@@ -109,14 +109,14 @@ void CController::motionPlan()
 		{
 			_pos_goal_left_hand(0) = _x_left_hand(0) - 0.0;
 			_pos_goal_left_hand(1) = _x_left_hand(1) - 0.0;
-			_pos_goal_left_hand(2) = _x_left_hand(2) + 0.9;
+			_pos_goal_left_hand(2) = _x_left_hand(2) + 0.1; //0.4
 			_rpy_goal_left_hand(0) = _x_left_hand(3);
 			_rpy_goal_left_hand(1) = _x_left_hand(4);
 			_rpy_goal_left_hand(2) = _x_left_hand(5);// -90.0 * DEG2RAD;
 
 			_pos_goal_right_hand(0) = _x_right_hand(0) - 0.0;
 			_pos_goal_right_hand(1) = _x_right_hand(1) - 0.0;
-			_pos_goal_right_hand(2) = _x_right_hand(2) + 0.9;
+			_pos_goal_right_hand(2) = _x_right_hand(2) + 0.1; //0.4
 			_rpy_goal_right_hand(0) = _x_right_hand(3);
 			_rpy_goal_right_hand(1) = _x_right_hand(4);
 			_rpy_goal_right_hand(2) = _x_right_hand(5);// +90.0 * DEG2RAD;
@@ -215,7 +215,7 @@ void CController::control_mujoco()
 	
 	safeModeReplaceTorque(_bool_safemode);
 
-	cout << _torque.transpose() << endl;
+	//cout << _torque.transpose() << endl;
 }
 
 
@@ -270,8 +270,8 @@ void CController::JointControl()
 void CController::OperationalSpaceControl()
 {
 	_torque.setZero();	
-	_kp = 100.0;
-	_kd = 20.0;
+	_kp = 50.0;
+	_kd = 15.0;
 
 	_x_err_left_hand = _x_des_left_hand - Model._x_left_hand;
 	_R_des_left_hand = CustomMath::GetBodyRotationMatrix(_x_des_left_hand(3), _x_des_left_hand(4), _x_des_left_hand(5));	
@@ -284,22 +284,68 @@ void CController::OperationalSpaceControl()
 	_Rdot_err_left_hand = -Model._xdot_left_hand.segment(3, 3); //only daming for orientation
 	_xdot_err_right_hand = _xdot_des_right_hand - Model._xdot_right_hand.segment(0, 3);
 	_Rdot_err_right_hand = -Model._xdot_right_hand.segment(3, 3); //only daming for orientation	
+		
 	
-	
-	// set 1
 	// 1st: hands pos and ori, 2nd: joint dampings
 	_Lambda_hands.setZero();
-	_Lambda_hands = CustomMath::pseudoInverseQR(_J_T_hands) * Model._A * CustomMath::pseudoInverseQR(_J_hands);	
+	_J_bar_T_hands.setZero();
+	_J_bar_T_hands = CustomMath::pseudoInverseQR(_J_T_hands);
+	_Lambda_hands = _J_bar_T_hands * Model._A * CustomMath::pseudoInverseQR(_J_hands);
 	_Null_hands = _Id_15 - _J_T_hands * _Lambda_hands * _J_hands * Model._A.inverse();	
-
-	//cout << _Null_hands << endl << endl;
 
 	_xddot_star.segment(0, 3) = _kp * _x_err_left_hand + _kd * _xdot_err_left_hand;//left hand position control
 	_xddot_star.segment(3, 3) = _kp * _R_err_left_hand + _kd * _Rdot_err_left_hand;//left hand orientation control
 	_xddot_star.segment(6, 3) = _kp * _x_err_right_hand + _kd * _xdot_err_right_hand;//right hand position control
-	_xddot_star.segment(9, 3) = _kp * _R_err_right_hand + _kd * _Rdot_err_right_hand;//right hand orientation control	
-	
-	_torque = _J_T_hands * _Lambda_hands * _xddot_star + _Null_hands * (Model._A * (-_kdj * _qdot)) + Model._bg;	
+	_xddot_star.segment(9, 3) = _kp * _R_err_right_hand + _kd * _Rdot_err_right_hand;//right hand orientation control
+
+	safeWorkSpaceLimit();
+	_xddot_star.segment(0, 3) = _kp * _x_err_left_hand + _kd * _xdot_err_left_hand + _acc_workspace_avoid_left;
+	_xddot_star.segment(6, 3) = _kp * _x_err_right_hand + _kd * _xdot_err_right_hand + _acc_workspace_avoid_left;
+
+	_torque = _J_T_hands * _Lambda_hands * _xddot_star + _Null_hands * (Model._A * (-_kdj * _qdot)) + Model._bg;
+
+	_S_T.setZero(); //select wrist joints
+	_S_T(5, 0) = 1.0;
+	_S_T(6, 1) = 1.0;
+	_S_T(7, 2) = 1.0;
+	_S_T(12, 3) = 1.0;
+	_S_T(13, 4) = 1.0;
+	_S_T(14, 5) = 1.0;
+	//_J_bar_T_hands_S_T = _J_bar_T_hands * _S_T;
+	//_W_mat_S = _S_T.transpose() * (Model._A).inverse() * _S_T;
+	//_W_mat_S.setIdentity();
+	//cout << _W_mat_S << endl << endl;
+	//cout << _J_bar_T_hands_S_T << endl << endl;
+	//_J_tilde_T = CustomMath::WeightedPseudoInverse(_J_bar_T_hands_S_T, _W_mat_S, false);
+	//_J_tilde_T = CustomMath::pseudoInverseQR(_J_bar_T_hands_S_T);
+	_J_bar_T_hands_S_T = _J_hands* Model._A.inverse()* _S_T;
+	_J_tilde_T = CustomMath::pseudoInverseQR(_J_bar_T_hands_S_T);
+	//cout << _J_tilde_T << endl << endl;
+
+	_xddot_reinforce.segment(0, 3) = 16000.0 * _x_err_left_hand + 40.0 * _xdot_err_left_hand;//left hand position control
+	_xddot_reinforce.segment(3, 3) = 16000.0 * _R_err_left_hand + 40.0  * _Rdot_err_left_hand;//left hand orientation control
+	_xddot_reinforce.segment(6, 3) = 16000.0 * _x_err_right_hand + 40.0  * _xdot_err_right_hand;//right hand position control
+	_xddot_reinforce.segment(9, 3) = 16000.0 * _R_err_right_hand + 40.0 * _Rdot_err_right_hand;//right hand orientation control	
+
+	_torque_reinforce = _S_T * _J_tilde_T * _Lambda_hands * _xddot_reinforce;
+
+	for (int i = 0; i < 15; i++)
+	{
+		if (_torque_reinforce(i) > 5.0)
+		{
+			_torque_reinforce(i) = 5.0;
+		}
+		else if (_torque_reinforce(i) < -5.0)
+		{
+			_torque_reinforce(i) = -5.0;
+		}
+	}	
+
+	_torque = _J_T_hands * _Lambda_hands * _xddot_star + _Null_hands * (Model._A * (-_kdj * _qdot)) + Model._bg + _torque_reinforce;
+
+	//cout << (_S_T * _J_tilde_T * _Lambda_hands * _xddot_reinforce).transpose() << endl;
+
+	cout << _x_err_left_hand.transpose() << " and " << _x_err_right_hand.transpose() << endl <<endl;
 
 }
 
@@ -802,7 +848,7 @@ void CController::safeWorkSpaceLimit()
 	_dir_hand_to_shoulder_left = (Model._x_left_hand - Model._x_left_shoulder)/ _dist_shoulder_hand_left;
 	_dir_hand_to_shoulder_right = (Model._x_right_hand - Model._x_right_shoulder) / _dist_shoulder_hand_right;
 
-	_workspace_avoid_gain = 100.0;	
+	_workspace_avoid_gain = 10.0;	
 	double dist_boundary = 0.6;
 	double dist_margin = 0.03;
 	double alpha = 0.0;
@@ -905,6 +951,7 @@ void CController::Initialize()
 	_kp = 400.0;
 	_kd = 40.0;
 
+	//OSF
 	_J_hands.setZero(12, 15);
 	_Jdot_hands.setZero(12, 15);
 	_Jdot_qdot.setZero(12);
@@ -913,6 +960,7 @@ void CController::Initialize()
 	_J_T_hands.setZero(15, 12);
 	_Lambda_hands.setZero(12, 12);
 	_Null_hands.setZero(15, 15);
+	_J_bar_T_hands.setZero(12, 15);
 
 	_J_pos_hands.setZero(6, 15);
 	_J_pos_T_hands.setZero(15, 6);
@@ -927,6 +975,13 @@ void CController::Initialize()
 	_rpy_goal_left_hand.setZero();
 	_pos_goal_right_hand.setZero();
 	_rpy_goal_right_hand.setZero();
+
+	_S_T.setZero(15, 6);
+	_J_bar_T_hands_S_T.setZero(12,6);
+	_W_mat_S.setZero(6, 6);
+	_J_tilde_T.setZero(6,12);
+	_xddot_reinforce.setZero(12);
+	_torque_reinforce.setZero(15);
 
 
 	_Id_15.setIdentity(15, 15);

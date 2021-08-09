@@ -74,6 +74,7 @@ private:
 	void ModelUpdate();
 	MatrixXd _J_hands; // 12x15
 	MatrixXd _J_T_hands; // 15x12
+	MatrixXd _J_bar_T_hands;//12x15
 	MatrixXd _Jdot_hands;
 	MatrixXd _pre_J_hands;
 	MatrixXd _pre_Jdot_hands;
@@ -99,6 +100,13 @@ private:
 	MatrixXd _Lambda_ori_hands; //inertia matri 6x6
 	MatrixXd _Null_hands_ori; //null space projection matrix 15x15
 	MatrixXd _Null_hands_pos; //null space projection matrix 15x15
+
+	MatrixXd _S_T; //selection matrix transpose
+	MatrixXd _J_bar_T_hands_S_T; //
+	MatrixXd _W_mat_S;
+	MatrixXd _J_tilde_T; //J^T with consideration of selection matrix
+	VectorXd _xddot_reinforce; //for additonal feedback acceleration
+	VectorXd _torque_reinforce;
 
 	Vector3d _x_err_left_hand;
 	Vector3d _x_err_right_hand;
