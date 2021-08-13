@@ -29,6 +29,7 @@ void CTrajectory::Initialize()
 	_goal_pos.setZero(_vector_size);
 	_goal_vel.setZero(_vector_size);
 	_bool_trajectory_complete = false;
+	_motion_threshold = 0.0005;
 }
 
 void CTrajectory::reset_initial(double time0, VectorXd init_pos, VectorXd init_vel)
@@ -75,6 +76,15 @@ VectorXd CTrajectory::position_cubicSpline()
 			+ (3.0 * (_goal_pos - _init_pos) / ((_time_end - _time_start) * (_time_end - _time_start)) - 2.0 * _init_vel / (_time_end - _time_start) - _goal_vel / (_time_end - _time_start)) * (_time - _time_start) * (_time - _time_start)
 			+ (-2.0 * (_goal_pos - _init_pos) / ((_time_end - _time_start) * (_time_end - _time_start) * (_time_end - _time_start)) + (_init_vel + _goal_vel) / ((_time_end - _time_start) * (_time_end - _time_start))) * (_time - _time_start) * (_time - _time_start) * (_time - _time_start);
 	}
+
+	for (int i = 0; i < _vector_size; i++) //do not use cubic spline when desired motion is small
+	{
+		if (abs(_goal_pos(i) - _init_pos(i)) <= _motion_threshold)
+		{
+			xd(i) = _goal_pos(i);
+		}
+	}
+
 	return xd;
 }
 
@@ -94,8 +104,89 @@ VectorXd CTrajectory::velocity_cubicSpline()
 		xdotd = _init_vel + 2.0 * (3.0 * (_goal_pos - _init_pos) / ((_time_end - _time_start) * (_time_end - _time_start)) - 2.0 * _init_vel / (_time_end - _time_start) - _goal_vel / (_time_end - _time_start)) * (_time - _time_start)
 			+ 3.0 * (-2.0 * (_goal_pos - _init_pos) / ((_time_end - _time_start) * (_time_end - _time_start) * (_time_end - _time_start)) + (_init_vel + _goal_vel) / ((_time_end - _time_start) * (_time_end - _time_start))) * (_time - _time_start) * (_time - _time_start);
 	}
+
+	for (int i = 0; i < _vector_size; i++) //do not use cubic spline when desired motion is small
+	{
+		if (abs(_goal_pos(i) - _init_pos(i)) <= _motion_threshold)
+		{
+			xdotd(i) = 0.0;
+		}
+	}
+
 	return xdotd;
 }
+
+
+VectorXd CTrajectory::position_sinefunction(double periodTime)
+{
+	VectorXd xd(_vector_size);
+	VectorXd Amplitude(_vector_size);
+	Amplitude = _goal_pos - _init_pos;
+
+	if (_time <= _time_start)
+	{
+		xd = _init_pos;
+	}
+	else if (_time >= _time_end)
+	{
+		for (int i = 0; i < _vector_size; i++)
+		{
+			xd(i) = Amplitude(i) * sin(2.0 * 3.141592 * (_time_end - _time_start) / periodTime) + _init_pos(i);
+		}
+	}
+	else
+	{
+		for (int i = 0; i < _vector_size; i++)
+		{
+			xd(i) = Amplitude(i)*sin( 2.0* 3.141592 * (_time- _time_start)/ periodTime) + _init_pos(i);
+		}
+	}
+
+	for (int i = 0; i < _vector_size; i++) //do not use trajectory when desired motion is small
+	{
+		if (abs(_goal_pos(i) - _init_pos(i)) <= _motion_threshold)
+		{
+			xd(i) = _goal_pos(i);
+		}
+	}
+
+	return xd;
+}
+
+VectorXd CTrajectory::velocity_sinefunction(double periodTime)
+{
+	VectorXd xdotd(_vector_size);
+	VectorXd Amplitude(_vector_size);
+	Amplitude = _goal_pos - _init_pos;
+
+	if (_time <= _time_start)
+	{
+		xdotd = _init_vel;
+	}
+	else if (_time >= _time_end)
+	{
+		xdotd.setZero();
+	}
+	else
+	{
+		for (int i = 0; i < _vector_size; i++)
+		{
+			xdotd(i) = 2.0 * 3.141592/ periodTime * Amplitude(i) * cos(2.0 * 3.141592 * (_time - _time_start) / periodTime);
+		}
+	}
+
+	for (int i = 0; i < _vector_size; i++) //do not use trajectory when desired motion is small
+	{
+		if (abs(_goal_pos(i) - _init_pos(i)) <= _motion_threshold)
+		{
+			xdotd(i) = _goal_pos(i);
+		}
+	}
+
+	return xdotd;
+}
+
+
 
 void CTrajectory::check_vector_size(VectorXd X)
 {

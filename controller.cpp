@@ -75,6 +75,12 @@ void CController::motionPlan()
 	_time_plan(2) = 1.0; //wait
 	_time_plan(3) = 2.0; //task space motion
 	_time_plan(4) = 2.0; //task space motion
+	_time_plan(5) = 1.0; //task space motion
+	_time_plan(6) = 1.0; //task space motion
+	_time_plan(7) = 3.0; //task space motion
+	_time_plan(8) = 1.0; //task space motion
+	_time_plan(9) = 1.0; //task space motion
+	_time_plan(10) = 2.0; //move home position
 
 	if (_bool_plan(_cnt_plan) == 1)
 	{
@@ -89,40 +95,135 @@ void CController::motionPlan()
 		}
 		else if (_cnt_plan == 3)
 		{
-			_pos_goal_left_hand(0) = _x_left_hand(0) + 0.1;// 0.25;
-			_pos_goal_left_hand(1) = _x_left_hand(1) - 0.0;
-			_pos_goal_left_hand(2) = _x_left_hand(2) - 0.0;
-			_rpy_goal_left_hand(0) = _x_left_hand(3);
-			_rpy_goal_left_hand(1) = _x_left_hand(4);
-			_rpy_goal_left_hand(2) = _x_left_hand(5);// -90.0 * DEG2RAD;
+			_pos_goal_left_hand(0) = 0.4;// _x_left_hand(0) + 0.0;
+			_pos_goal_left_hand(1) = 0.1 + 0.075;// _x_left_hand(1) - 0.15;
+			_pos_goal_left_hand(2) = _x_left_hand(2) + 0.2;
+			_rpy_goal_left_hand(0) = 0.0;// _x_left_hand(3);
+			_rpy_goal_left_hand(1) = -90.0 * DEG2RAD; //_x_left_hand(4);
+			_rpy_goal_left_hand(2) = 0.0; //_x_left_hand(5);// -90.0 * DEG2RAD;
 
-			_pos_goal_right_hand(0) = _x_right_hand(0) + 0.1;// 0.25;
-			_pos_goal_right_hand(1) = _x_right_hand(1) - 0.0;
-			_pos_goal_right_hand(2) = _x_right_hand(2) - 0.0;
-			_rpy_goal_right_hand(0) = _x_right_hand(3);
-			_rpy_goal_right_hand(1) = _x_right_hand(4);
-			_rpy_goal_right_hand(2) = _x_right_hand(5);// +90.0 * DEG2RAD;
+			_pos_goal_right_hand(0) = 0.4;// _x_right_hand(0) + 0.0;
+			_pos_goal_right_hand(1) = 0.1 - 0.075;// _x_right_hand(1) + 0.15;
+			_pos_goal_right_hand(2) = _x_right_hand(2) + 0.2;
+			_rpy_goal_right_hand(0) = 0.0;// _x_right_hand(3);
+			_rpy_goal_right_hand(1) = -90.0 * DEG2RAD; //_x_right_hand(4);
+			_rpy_goal_right_hand(2) = 180.0 * DEG2RAD; //_x_right_hand(5);// +90.0 * DEG2RAD;
 
 			reset_target(_time_plan(_cnt_plan), _pos_goal_left_hand, _rpy_goal_left_hand, _pos_goal_right_hand, _rpy_goal_right_hand);
 		}
 		else if (_cnt_plan == 4)
 		{
-			_pos_goal_left_hand(0) = _x_left_hand(0) - 0.0;
-			_pos_goal_left_hand(1) = _x_left_hand(1) - 0.0;
-			_pos_goal_left_hand(2) = _x_left_hand(2) + 0.1; //0.4
+			_pos_goal_left_hand(0) = _x_left_hand(0)+0.2;
+			_pos_goal_left_hand(1) = _x_left_hand(1);
+			_pos_goal_left_hand(2) = _x_left_hand(2); //0.4
 			_rpy_goal_left_hand(0) = _x_left_hand(3);
 			_rpy_goal_left_hand(1) = _x_left_hand(4);
 			_rpy_goal_left_hand(2) = _x_left_hand(5);// -90.0 * DEG2RAD;
 
-			_pos_goal_right_hand(0) = _x_right_hand(0) - 0.0;
-			_pos_goal_right_hand(1) = _x_right_hand(1) - 0.0;
-			_pos_goal_right_hand(2) = _x_right_hand(2) + 0.1; //0.4
+			_pos_goal_right_hand(0) = _x_right_hand(0)+0.2;
+			_pos_goal_right_hand(1) = _x_right_hand(1);
+			_pos_goal_right_hand(2) = _x_right_hand(2); //0.4
 			_rpy_goal_right_hand(0) = _x_right_hand(3);
 			_rpy_goal_right_hand(1) = _x_right_hand(4);
 			_rpy_goal_right_hand(2) = _x_right_hand(5);// +90.0 * DEG2RAD;
 
 			reset_target(_time_plan(_cnt_plan), _pos_goal_left_hand, _rpy_goal_left_hand, _pos_goal_right_hand, _rpy_goal_right_hand);
 		}
+		else if (_cnt_plan == 5)
+		{
+			_pos_goal_left_hand(0) = _x_left_hand(0);
+			_pos_goal_left_hand(1) = _x_left_hand(1)-0.05;
+			_pos_goal_left_hand(2) = _x_left_hand(2);
+			_rpy_goal_left_hand(0) = _x_left_hand(3);
+			_rpy_goal_left_hand(1) = _x_left_hand(4);
+			_rpy_goal_left_hand(2) = _x_left_hand(5);
+
+			_pos_goal_right_hand(0) = _x_right_hand(0);
+			_pos_goal_right_hand(1) = _x_right_hand(1)+0.05;
+			_pos_goal_right_hand(2) = _x_right_hand(2);
+			_rpy_goal_right_hand(0) = _x_right_hand(3);
+			_rpy_goal_right_hand(1) = _x_right_hand(4);
+			_rpy_goal_right_hand(2) = _x_right_hand(5);
+
+			reset_target(_time_plan(_cnt_plan), _pos_goal_left_hand, _rpy_goal_left_hand, _pos_goal_right_hand, _rpy_goal_right_hand);
+		}
+		else if (_cnt_plan == 6)
+		{
+			_pos_goal_left_hand(0) = _x_left_hand(0)-0.1;
+			_pos_goal_left_hand(1) = _x_left_hand(1);
+			_pos_goal_left_hand(2) = _x_left_hand(2);
+			_rpy_goal_left_hand(0) = _x_left_hand(3);
+			_rpy_goal_left_hand(1) = _x_left_hand(4);
+			_rpy_goal_left_hand(2) = _x_left_hand(5);
+
+			_pos_goal_right_hand(0) = _x_right_hand(0)-0.1;
+			_pos_goal_right_hand(1) = _x_right_hand(1);
+			_pos_goal_right_hand(2) = _x_right_hand(2);
+			_rpy_goal_right_hand(0) = _x_right_hand(3);
+			_rpy_goal_right_hand(1) = _x_right_hand(4);
+			_rpy_goal_right_hand(2) = _x_right_hand(5);
+
+			reset_target(_time_plan(_cnt_plan), _pos_goal_left_hand, _rpy_goal_left_hand, _pos_goal_right_hand, _rpy_goal_right_hand);
+		}
+		else if (_cnt_plan == 7)
+		{
+			_pos_goal_left_hand(0) = _x_left_hand(0);
+			_pos_goal_left_hand(1) = -0.1+0.025;
+			_pos_goal_left_hand(2) = _x_left_hand(2);
+			_rpy_goal_left_hand(0) = _x_left_hand(3);
+			_rpy_goal_left_hand(1) = _x_left_hand(4);
+			_rpy_goal_left_hand(2) = _x_left_hand(5);
+
+			_pos_goal_right_hand(0) = _x_right_hand(0);
+			_pos_goal_right_hand(1) = -0.1-0.025;
+			_pos_goal_right_hand(2) = _x_right_hand(2);
+			_rpy_goal_right_hand(0) = _x_right_hand(3);
+			_rpy_goal_right_hand(1) = _x_right_hand(4);
+			_rpy_goal_right_hand(2) = _x_right_hand(5);
+
+			reset_target(_time_plan(_cnt_plan), _pos_goal_left_hand, _rpy_goal_left_hand, _pos_goal_right_hand, _rpy_goal_right_hand);
+		}
+		else if (_cnt_plan == 8)
+		{
+			_pos_goal_left_hand(0) = _x_left_hand(0)+0.1;
+			_pos_goal_left_hand(1) = _x_left_hand(1);
+			_pos_goal_left_hand(2) = _x_left_hand(2);
+			_rpy_goal_left_hand(0) = _x_left_hand(3);
+			_rpy_goal_left_hand(1) = _x_left_hand(4);
+			_rpy_goal_left_hand(2) = _x_left_hand(5);
+
+			_pos_goal_right_hand(0) = _x_right_hand(0)+0.1;
+			_pos_goal_right_hand(1) = _x_right_hand(1);
+			_pos_goal_right_hand(2) = _x_right_hand(2);
+			_rpy_goal_right_hand(0) = _x_right_hand(3);
+			_rpy_goal_right_hand(1) = _x_right_hand(4);
+			_rpy_goal_right_hand(2) = _x_right_hand(5);
+
+			reset_target(_time_plan(_cnt_plan), _pos_goal_left_hand, _rpy_goal_left_hand, _pos_goal_right_hand, _rpy_goal_right_hand);
+		}
+		else if (_cnt_plan == 9)
+		{
+		_pos_goal_left_hand(0) = _x_left_hand(0);
+		_pos_goal_left_hand(1) = _x_left_hand(1) + 0.05;
+		_pos_goal_left_hand(2) = _x_left_hand(2);
+		_rpy_goal_left_hand(0) = _x_left_hand(3);
+		_rpy_goal_left_hand(1) = _x_left_hand(4);
+		_rpy_goal_left_hand(2) = _x_left_hand(5);
+
+		_pos_goal_right_hand(0) = _x_right_hand(0);
+		_pos_goal_right_hand(1) = _x_right_hand(1) - 0.05;
+		_pos_goal_right_hand(2) = _x_right_hand(2);
+		_rpy_goal_right_hand(0) = _x_right_hand(3);
+		_rpy_goal_right_hand(1) = _x_right_hand(4);
+		_rpy_goal_right_hand(2) = _x_right_hand(5);
+
+		reset_target(_time_plan(_cnt_plan), _pos_goal_left_hand, _rpy_goal_left_hand, _pos_goal_right_hand, _rpy_goal_right_hand);
+		}
+		else if (_cnt_plan == 10)
+		{
+			reset_target(_time_plan(_cnt_plan), _q_home);
+		}
+
 	}
 }
 
@@ -169,10 +270,14 @@ void CController::control_mujoco()
 		LeftHandTrajectory.update_time(_t);
 		_x_des_left_hand = LeftHandTrajectory.position_cubicSpline();
 		_xdot_des_left_hand = LeftHandTrajectory.velocity_cubicSpline();
+		//_x_des_left_hand = LeftHandTrajectory.position_sinefunction(2.0);
+		//_xdot_des_left_hand = LeftHandTrajectory.velocity_sinefunction(2.0);
 
 		RightHandTrajectory.update_time(_t);
 		_x_des_right_hand = RightHandTrajectory.position_cubicSpline();
 		_xdot_des_right_hand = RightHandTrajectory.velocity_cubicSpline();
+		//_x_des_right_hand = RightHandTrajectory.position_sinefunction(2.0);
+		//_xdot_des_right_hand = RightHandTrajectory.velocity_sinefunction(2.0);
 
 		if (LeftHandTrajectory.check_trajectory_complete() == 1 || RightHandTrajectory.check_trajectory_complete() == 1)
 		{
@@ -182,32 +287,32 @@ void CController::control_mujoco()
 
 		if (_control_mode == 2)
 		{
-			chrono::system_clock::time_point start = chrono::system_clock::now();
+			//chrono::system_clock::time_point start = chrono::system_clock::now();
 
 			OperationalSpaceControl();
 
-			chrono::system_clock::time_point end = chrono::system_clock::now();
-			chrono::nanoseconds nano = end - start;
+			//chrono::system_clock::time_point end = chrono::system_clock::now();
+			//chrono::nanoseconds nano = end - start;
 			//printf("%f \n", nano / 1000.0);//millisec
 		}
 		else if (_control_mode == 3)
 		{
-			chrono::system_clock::time_point start = chrono::system_clock::now();
+			//chrono::system_clock::time_point start = chrono::system_clock::now();
 
 			HQPTaskSpaceControl();
 
-			chrono::system_clock::time_point end = chrono::system_clock::now();
-			chrono::nanoseconds nano = end - start;
+			//chrono::system_clock::time_point end = chrono::system_clock::now();
+			//chrono::nanoseconds nano = end - start;
 			//printf("%f \n", nano / 1000.0);//millisec
 		}
 		else if (_control_mode == 4)
 		{
-			chrono::system_clock::time_point start = chrono::system_clock::now();
+			//chrono::system_clock::time_point start = chrono::system_clock::now();
 
 			ReducedHQPTaskSpaceControl();
 
-			chrono::system_clock::time_point end = chrono::system_clock::now();
-			chrono::nanoseconds nano = end - start;
+			//chrono::system_clock::time_point end = chrono::system_clock::now();
+			//chrono::nanoseconds nano = end - start;
 			//printf("%f \n", nano/1000.0);//millisec
 		}
 		
@@ -270,8 +375,8 @@ void CController::JointControl()
 void CController::OperationalSpaceControl()
 {
 	_torque.setZero();	
-	_kp = 50.0;
-	_kd = 15.0;
+	_kp = 100.0;
+	_kd = 20.0;
 
 	_x_err_left_hand = _x_des_left_hand - Model._x_left_hand;
 	_R_des_left_hand = CustomMath::GetBodyRotationMatrix(_x_des_left_hand(3), _x_des_left_hand(4), _x_des_left_hand(5));	
@@ -341,11 +446,11 @@ void CController::OperationalSpaceControl()
 		}
 	}	
 
-	_torque = _J_T_hands * _Lambda_hands * _xddot_star + _Null_hands * (Model._A * (-_kdj * _qdot)) + Model._bg + _torque_reinforce;
+	//_torque = _J_T_hands * _Lambda_hands * _xddot_star + _Null_hands * (Model._A * (-_kdj * _qdot)) + Model._bg + _torque_reinforce;
 
 	//cout << (_S_T * _J_tilde_T * _Lambda_hands * _xddot_reinforce).transpose() << endl;
 
-	cout << _x_err_left_hand.transpose() << " and " << _x_err_right_hand.transpose() << endl <<endl;
+	//cout << _x_err_left_hand.transpose() << " and " << _x_err_right_hand.transpose() << endl <<endl;
 
 }
 

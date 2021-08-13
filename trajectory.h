@@ -24,11 +24,14 @@ public:
 	int check_trajectory_complete();
 	VectorXd position_cubicSpline();
 	VectorXd velocity_cubicSpline();
+	VectorXd position_sinefunction(double periodTime);
+	VectorXd velocity_sinefunction(double periodTime);
 
 private:
 	void Initialize();
 	void check_vector_size(VectorXd X);
 	bool _bool_trajectory_complete;
+	double _motion_threshold;
 };
 
 #endif
